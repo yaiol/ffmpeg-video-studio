@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* App-specific, non-token styles only. The palette and every shared class come from the catalog
+   CSS files that load before this one. */
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.workspace { padding: 16px 20px; }
+.workspace-empty { color: var(--text-mute); margin: 16px 0; }
+
+/* ─── Converter: the list, the bottom bar and the options panel ───────────────────────────────
+   Layout only. Every colour is a token and every control is the catalog's own class. */
+.converter-note { padding: 12px 16px; margin: 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.converter-list { padding: 8px 12px; }
+.converter-row { cursor: default; }
+.converter-state-ok  { color: var(--ok); }
+.converter-state-err { color: var(--danger); }
+.converter-state-run { color: var(--accent); }
+/* The file's icon: the same square whatever the file. */
+.converter-cover-box { width: 40px; height: 40px; justify-content: center; color: var(--text-mute); background: var(--bg-row); border-radius: 6px; overflow: hidden; }
+.converter-status { font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* The window's body: the file list takes what is left, the run's choices sit in a column of their own at
+   the right. The panel is the catalog's .pnl surface; this is layout only. */
+.converter-body { flex: 1; min-height: 0; display: flex; }
+.converter-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.converter-panel { width: 236px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-left: 1px solid var(--border); overflow-y: auto; }
+/* Every row is as wide as the column: the select takes what the button leaves. */
+.converter-panel .barh-grp { width: 100%; }
+.converter-panel .select { flex: 1; min-width: 0; width: auto; max-width: none; }
+.converter-panel-run { display: flex; gap: 8px; }
+/* width:auto beats the column rule above, or the group spans the row and its buttons stretch */
+.converter-panel .converter-panel-run .barh-grp { width: auto; flex: 0 0 auto; }
+/* The number at once is two digits at most: the select is as wide as that, not as the column. */
+.converter-panel-run .select { flex: 0 0 auto; width: 4.5em; }
+
+/* ─── The preset editor: a list on the left, the options of the selected entry on the right ─── */
+.manager { display: flex; gap: 24px; align-items: flex-start; height: 100%; min-height: 0; }
+/* Entries are reordered by dragging: the whole row is the handle, the held one dims. */
+.manager-list .lv-item { cursor: grab; user-select: none; }
+.manager-list .lv-item.reordering { opacity: 0.55; cursor: grabbing; }
+.manager-list { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; }
+.manager-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.manager-form { flex: 1; min-width: 0; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
+.manager-row { display: flex; gap: 8px; align-items: center; }
+.manager-tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.manager-example { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-dim); word-break: break-all; }
+
+/* A Settings tab the app supplies (the two editors) is a wide two-pane page, not a 600px column. */
+.stg-page.stg-page-app { max-width: none; height: 100%; }
+
+/* The advanced section of a preset: the same rhythm as the form around it. The controls sit in their
+   own column - display:flex on a <details> does not reach its children (they live in an internal
+   slot), so the gap is carried by this wrapper. */
+.manager-advanced > summary { cursor: pointer; }
+.manager-advanced-body { display: flex; flex-direction: column; gap: 18px; margin-top: 18px; }
+
+/* A row of the options panel: the icon of its Settings page (or an empty slot of the same width), then the drop-down group. */
+.converter-panel-apply { width: 100%; justify-content: center; }
+/* The list takes the keyboard (Ctrl+A) without a focus ring around the whole column. */
+.converter-list:focus { outline: none; }
+/* A row's tags: one chip per choice, wrapping under the path. */
+.converter-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; }
+/* The inputs of a row (the cut's start and end) share the group's width. */
+.converter-panel .barh-grp .input { flex: 1; min-width: 0; width: auto; }

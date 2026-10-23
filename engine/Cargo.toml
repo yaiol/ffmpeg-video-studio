@@ -1,0 +1,16 @@
+[package]
+name = "video-converter-engine"
+version = "0.1.0"
+edition = "2024"
+
+# ⚠ The library name is FIXED at `engine`, whatever the package is called: the package name
+# carries the app id and changes on scaffold, and a crate name is a code identifier, so letting it
+# vary would rewrite `.rs` source on every rename. The app imports it as `engine::…`.
+[lib]
+name = "engine"
+
+[dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+sha2 = "0.11.1"
+ureq = "3.4.2"
+zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
