@@ -18,6 +18,7 @@ body {
 
 /* ─── Converter: the list, the bottom bar and the options panel ───────────────────────────────
    Layout only. Every colour is a token and every control is the catalog's own class. */
+.manager-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .converter-note { padding: 12px 16px; margin: 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .converter-list { padding: 8px 12px; }
 .converter-row { cursor: default; }
@@ -49,7 +50,9 @@ body {
 .manager-list .lv-item.reordering { opacity: 0.55; cursor: grabbing; }
 .manager-list { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; }
 .manager-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.manager-form { flex: 1; min-width: 0; max-width: 560px; display: flex; flex-direction: column; gap: 18px; }
+/* the form scrolls by itself and its scrollbar sits on the window's edge: it takes the page's right padding (.stg-body, 32px) for itself, and its content keeps the old width */
+.manager-form { flex: 1; min-width: 0; margin-right: -32px; padding-right: 32px; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
+.manager-form > * { max-width: 560px; }
 .manager-row { display: flex; gap: 8px; align-items: center; }
 .manager-tokens { display: flex; flex-wrap: wrap; gap: 6px; }
 .manager-example { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-dim); word-break: break-all; }
@@ -71,3 +74,16 @@ body {
 .converter-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; }
 /* The inputs of a row (the cut's start and end) share the group's width. */
 .converter-panel .barh-grp .input { flex: 1; min-width: 0; width: auto; }
+/* The "Add an effect" group: a category button welded to the search box, which takes the rest of the width. */
+.fx-add { width: 100%; }
+.fx-name-row { display: flex; gap: 6px; align-items: center; }
+.fx-name-row .input { flex: 1 1 0; min-width: 0; }
+.fx-card { display: flex; flex-direction: column; }
+.fx-card.moving { opacity: .55; }
+.fx-head { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+.fx-grip { display: inline-flex; align-items: center; padding: 6px 2px; cursor: grab; color: var(--text-mute); touch-action: none; user-select: none; }
+.fx-title { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.fx-body { display: flex; flex-direction: column; gap: 18px; padding: 8px 0 12px 22px; }
+.fx-dragging { user-select: none; cursor: grabbing; }
+.fx-add-combo { flex: 1 1 0; min-width: 0; display: flex; }
+.fx-add-combo .input { width: 100%; min-width: 0; height: 100%; }

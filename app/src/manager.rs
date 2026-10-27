@@ -11,9 +11,9 @@ use dioxus_free_icons::{
     icons::ld_icons::{LdCopy, LdFolderOpen, LdPlus, LdTrash2},
 };
 use engine::{
-    AudioEntry, Destination, EffectsEntry, Lut, Preset, Rotation, Size,
+    AudioEntry, Destination, MetadataCleanup, Preset, Size,
     audio::Audio,
-    effects::{BlurFit, Corner, Crop, Effect, FRAME_RATES, Kind, TextOverlay, Watermark},
+    metadata::Mode,
     preset::{Container, ProResProfile, RateMode, Speed, Tune, VideoCodec},
 };
 
@@ -21,9 +21,10 @@ use engine::{
 pub const PRESETS: &str = "presets";
 pub const SIZES: &str = "sizes";
 pub const AUDIO: &str = "audio";
-pub const LUTS: &str = "luts";
 pub const DESTINATIONS: &str = "destinations";
 pub const EFFECTS: &str = "effects";
+pub const METADATA: &str = "metadata";
+pub const NOTIFICATIONS: &str = "notifications";
 
 fn container_label(c: Container) -> &'static str {
     match c {
@@ -110,7 +111,7 @@ fn profile_label(p: ProResProfile) -> &'static str {
 
 /// Put the dragged entry into the slot of the one it was dragged over. The order of the saved list IS
 /// the order everywhere (this list and the window's drop-down), so this is the whole feature.
-fn reorder<T>(items: &mut Vec<T>, id_of: impl Fn(&T) -> &str, dragged: &str, target: &str) {
+pub(crate) fn reorder<T>(items: &mut Vec<T>, id_of: impl Fn(&T) -> &str, dragged: &str, target: &str) {
     let from = items.iter().position(|x| id_of(x) == dragged);
     let to = items.iter().position(|x| id_of(x) == target);
     if let (Some(from), Some(to)) = (from, to) {
@@ -643,10 +644,12 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                             let id_over = z.id.clone();
                             let active = z.id == cur_id;
                             let moving = dragging().as_deref() == Some(z.id.as_str());
+                            // A height alone is the usual case and reads as the video world writes it: 1080p. Both sides
+                            // are "width x height"; a width alone is said in words (nothing else could be unambiguous).
                             let limit = match (z.max_width, z.max_height) {
                                 (Some(w), Some(h)) => format!("{w} x {h}"),
-                                (Some(w), None) => format!("{w} x -"),
-                                (None, Some(h)) => format!("- x {h}"),
+                                (Some(w), None) => t("lblSizeChipWide").replace("{w}", &w.to_string()),
+                                (None, Some(h)) => format!("{h}p"),
                                 (None, None) => String::new(),
                             };
                             rsx! {
@@ -951,39 +954,174 @@ fn edit_audio(mut settings: Signal<Settings>, id: &str, edit: impl FnOnce(&mut A
     }
 }
 
-/// Apply `edit` to the LUT with this id and keep its path clean.
-fn edit_lut(mut settings: Signal<Settings>, id: &str, edit: impl FnOnce(&mut Lut)) {
+/// Apply `edit` to the metadata setting with this id.
+fn edit_metadata(mut settings: Signal<Settings>, id: &str, edit: impl FnOnce(&mut MetadataCleanup)) {
     let mut s = settings.write();
-    if let Some(l) = s.luts.iter_mut().find(|l| l.id == id) {
-        edit(l);
-        *l = l.clone().normalized();
+    if let Some(m) = s.metadata.iter_mut().find(|m| m.id == id) {
+        edit(m);
     }
 }
 
-/// The LUT editor, a page of the Settings view: the LUTs on the left, the name and the file of the selected one on the right.
+fn is_separator(c: char) -> bool {
+    c == '\n' || c == ';'
+}
+
+/// The byte range of the name a caret at `pos` (UTF-16 units; `usize::MAX` = at the end) is in: from after the previous
+/// separator to the next one.
+fn entry_span(text: &str, pos: usize) -> (usize, usize) {
+    let mut units = 0usize;
+    let mut at = text.len();
+    for (i, ch) in text.char_indices() {
+        if units >= pos {
+            at = i;
+            break;
+        }
+        units += ch.len_utf16();
+    }
+    let start = text[..at].rfind(is_separator).map_or(0, |i| i + 1);
+    let end = text[at..].find(is_separator).map_or(text.len(), |i| at + i);
+    (start, end)
+}
+
+/// `text` with the byte range `span` replaced by `name`, and the caret position (UTF-16 units) at the end of that name.
+fn replace_span(text: &str, span: (usize, usize), name: &str) -> (String, usize) {
+    let (start, end) = span;
+    let caret = text[..start].encode_utf16().count() + name.encode_utf16().count();
+    (format!("{}{}{}", &text[..start], name, &text[end..]), caret)
+}
+
+/// The names a metadata setting is about: one per line, or several separated by `;`. The text is stored as typed, line
+/// by line, and tidied only when a conversion uses it, otherwise the blank line a user is about to fill would vanish on
+/// every keystroke. The parent gives it a `key` of the setting's id, so it starts over when another one is picked.
+///
+/// Under the box, the known names that fit the line being typed (the one the caret is on) are offered as chips; a click
+/// puts the name in place of what was typed.
 #[component]
-pub fn LutEditor(settings: Signal<Settings>) -> Element {
-    let mut selected = use_signal(|| settings.read().lut_id.clone());
-    let mut dragging = use_signal(|| Option::<String>::None);
+fn MetaNamesField(settings: Signal<Settings>, id: String, lang: String, mode: Mode) -> Element {
+    let initial = settings
+        .read()
+        .metadata
+        .iter()
+        .find(|m| m.id == id)
+        .map(|m| m.exceptions.join(&char::from(10).to_string()))
+        .unwrap_or_default();
+    let mut raw = use_signal(|| initial);
+    // The caret as a position in the text (UTF-16 units, as the box reports it); the end until known.
+    let mut caret = use_signal(|| usize::MAX);
+    let t = |key: &str| i18n::t(&lang, key);
+    // With "keep all" the list names what is removed; with "remove all" it names what is kept.
+    let label = match mode {
+        Mode::Keep => t("lblMetaRemoveNames"),
+        Mode::Delete => t("lblMetaKeepNames"),
+    };
+    let hint = t("msgMetaNamesHint");
+    let box_id = format!("meta-names-{id}");
+
+    // Ask the box where the caret is. Typing, clicking and the arrow keys all move it.
+    let track = {
+        let box_id = box_id.clone();
+        move || {
+            let box_id = box_id.clone();
+            spawn(async move {
+                let mut ev = document::eval(&format!("dioxus.send(document.getElementById('{box_id}')?.selectionStart ?? -1);"));
+                if let Ok(pos) = ev.recv::<i64>().await {
+                    caret.set(if pos < 0 { usize::MAX } else { pos as usize });
+                }
+            });
+        }
+    };
+
+    let text = raw();
+    let (start, end) = entry_span(&text, caret());
+    let typed = &text[start..end];
+    let taken: Vec<String> = text[..start].split(is_separator).chain(text[end..].split(is_separator)).map(str::to_owned).collect();
+    let suggestions = engine::metadata::suggest_names(typed, &taken, 8);
+
+    let id_ev = id.clone();
+    let oninput_track = track.clone();
+    let onkeyup_track = track.clone();
+    let onclick_track = track;
+    rsx! {
+        div { class: "dlg-field",
+            label { class: "dlg-field-label", "{label}" }
+            textarea {
+                id: "{box_id}",
+                class: "textarea",
+                rows: "5",
+                spellcheck: "false",
+                value: "{raw}",
+                oninput: move |e| {
+                    let text = e.value();
+                    let list: Vec<String> = text.lines().map(str::to_owned).collect();
+                    raw.set(text);
+                    edit_metadata(settings, &id_ev, |m| m.exceptions = list);
+                    oninput_track();
+                },
+                onkeyup: move |_| onkeyup_track(),
+                onclick: move |_| onclick_track(),
+            }
+            if !suggestions.is_empty() {
+                div { class: "manager-suggest",
+                    for name in suggestions {
+                        {
+                            let box_id = box_id.clone();
+                            let id = id.clone();
+                            rsx! {
+                                button {
+                                    key: "{name}",
+                                    class: "chip",
+                                    onclick: move |_| {
+                                        let (new_text, end) = replace_span(&raw(), (start, end), name);
+                                        let list: Vec<String> = new_text.lines().map(str::to_owned).collect();
+                                        raw.set(new_text);
+                                        caret.set(end);
+                                        edit_metadata(settings, &id, |m| m.exceptions = list);
+                                        // Back into the box, caret at the end of the name just placed.
+                                        let _ = document::eval(&format!(
+                                            "const b = document.getElementById('{box_id}'); if (b) {{ b.focus(); b.setSelectionRange({end}, {end}); }}"
+                                        ));
+                                    },
+                                    "{name}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            p { class: "hint", "{hint}" }
+        }
+    }
+}
+
+/// The metadata page of Settings: named entries, each saying which tags are removed and whether the chapters go too.
+/// There is never none: a fresh install holds one that keeps everything.
+#[component]
+pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
+    let mut selected = use_signal(|| settings.read().metadata_id.clone());
 
     let lang = settings.read().lang.clone();
     let t = |key: &str| i18n::t(&lang, key);
 
-    let luts = settings.read().luts.clone();
-    let current = luts.iter().find(|l| l.id == selected()).or(luts.first()).cloned();
-    let cur_id = current.as_ref().map(|l| l.id.clone()).unwrap_or_default();
+    let entries = settings.read().metadata.clone();
+    // An unknown selection falls back to the first entry; there is never none.
+    let current = entries.iter().find(|m| m.id == selected()).or(entries.first()).cloned();
+    let can_delete = entries.len() > 1;
+    let cur_id = current.as_ref().map(|m| m.id.clone()).unwrap_or_default();
+    // In the saved order, which the user changes by dragging.
+    let listed = entries.clone();
+    let mut dragging = use_signal(|| Option::<String>::None);
+    let s_reorder = t("msgMngReorderHint");
 
     let s_new = t("btnMngNew");
     let s_dup = t("btnMngDuplicate");
     let s_del = t("btnMngDelete");
-    let s_reorder = t("msgMngReorderHint");
-    let s_browse = t("btnDstBrowse");
+    let s_name = t("lblPrsName");
+    let s_mode = t("lblMetaMode");
+    let s_mode_keep = t("lblMetaModeKeep");
+    let s_mode_delete = t("lblMetaModeDelete");
+    let s_chapters = t("lblMetaRemoveChapters");
 
-    let id_for_dup = cur_id.clone();
-    let id_for_del = cur_id.clone();
-    let id_for_name = cur_id.clone();
-    let id_for_path = cur_id.clone();
-    let id_for_browse = cur_id.clone();
+    let (id_name, id_mode, id_chapters, id_dup, id_del) = (cur_id.clone(), cur_id.clone(), cur_id.clone(), cur_id.clone(), cur_id.clone());
 
     rsx! {
         div { class: "manager",
@@ -994,9 +1132,11 @@ pub fn LutEditor(settings: Signal<Settings>) -> Element {
                         title: "{s_new}",
                         "aria-label": "{s_new}",
                         onclick: move |_| {
-                            let l = Lut::new(&s_new);
-                            selected.set(l.id.clone());
-                            settings.write().luts.push(l);
+                            let m = MetadataCleanup::new(&s_new);
+                            selected.set(m.id.clone());
+                            let mut s = settings.write();
+                            s.metadata_id = m.id.clone();
+                            s.metadata.push(m);
                         },
                         Icon { width: 14, height: 14, icon: LdPlus }
                     }
@@ -1004,14 +1144,15 @@ pub fn LutEditor(settings: Signal<Settings>) -> Element {
                         class: "btn icon",
                         title: "{s_dup}",
                         "aria-label": "{s_dup}",
-                        disabled: current.is_none(),
                         onclick: move |_| {
-                            let src = settings.read().luts.iter().find(|l| l.id == id_for_dup).cloned();
-                            if let Some(mut l) = src {
-                                l.id = engine::preset::new_id();
-                                l.name = format!("{} 2", l.name);
-                                selected.set(l.id.clone());
-                                settings.write().luts.push(l);
+                            let src = settings.read().metadata.iter().find(|m| m.id == id_dup).cloned();
+                            if let Some(mut m) = src {
+                                m.id = engine::preset::new_id();
+                                m.name = format!("{} 2", m.name);
+                                selected.set(m.id.clone());
+                                let mut s = settings.write();
+                                s.metadata_id = m.id.clone();
+                                s.metadata.push(m);
                             }
                         },
                         Icon { width: 14, height: 14, icon: LdCopy }
@@ -1020,27 +1161,27 @@ pub fn LutEditor(settings: Signal<Settings>) -> Element {
                         class: "btn icon",
                         title: "{s_del}",
                         "aria-label": "{s_del}",
-                        disabled: current.is_none(),
+                        disabled: !can_delete,
                         onclick: move |_| {
-                            settings.write().luts.retain(|l| l.id != id_for_del);
+                            settings.write().metadata.retain(|m| m.id != id_del);
                             let fixed = settings.read().clone().repaired();
-                            selected.set(fixed.luts.first().map(|l| l.id.clone()).unwrap_or_default());
+                            selected.set(fixed.metadata_id.clone());
                             settings.set(fixed);
                         },
                         Icon { width: 14, height: 14, icon: LdTrash2 }
                     }
                 }
                 div { class: "lv-scroll",
-                    for l in luts.iter() {
+                    for m in listed.iter() {
                         {
-                            let id = l.id.clone();
-                            let id_down = l.id.clone();
-                            let id_over = l.id.clone();
-                            let active = l.id == cur_id;
-                            let moving = dragging().as_deref() == Some(l.id.as_str());
+                            let id = m.id.clone();
+                            let id_down = m.id.clone();
+                            let id_over = m.id.clone();
+                            let active = m.id == cur_id;
+                            let moving = dragging().as_deref() == Some(m.id.as_str());
                             rsx! {
                                 button {
-                                    key: "{l.id}",
+                                    key: "{m.id}",
                                     class: match (active, moving) {
                                         (_, true) => "lv-item reordering",
                                         (true, _) => "lv-item active",
@@ -1057,15 +1198,15 @@ pub fn LutEditor(settings: Signal<Settings>) -> Element {
                                             dragging.set(None);
                                             return;
                                         }
-                                        reorder(&mut settings.write().luts, |l| l.id.as_str(), &from, &id_over);
+                                        reorder(&mut settings.write().metadata, |m| m.id.as_str(), &from, &id_over);
                                     },
                                     onpointerup: move |_| dragging.set(None),
                                     onclick: move |_| {
                                         selected.set(id.clone());
-                                        settings.write().lut_id = id.clone();
+                                        settings.write().metadata_id = id.clone();
                                     },
                                     div { class: "lv-item-body",
-                                        div { class: "lv-item-name", "{l.name}" }
+                                        div { class: "lv-item-name", "{m.name}" }
                                     }
                                 }
                             }
@@ -1074,51 +1215,49 @@ pub fn LutEditor(settings: Signal<Settings>) -> Element {
                 }
                 p { class: "hint", "{s_reorder}" }
             }
-            // The key makes the fields remount when another LUT is selected.
-            div { class: "manager-form", key: "{cur_id}",
-                if let Some(cur) = &current {
+            div { class: "manager-form",
+                if let Some(m) = current {
+                  Fragment { key: "{cur_id}",
                     div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblPrsName")} }
+                        label { class: "dlg-field-label", "{s_name}" }
                         input {
                             class: "input",
-                            value: "{cur.name}",
+                            value: "{m.name}",
                             oninput: move |e| {
                                 let v = e.value();
-                                edit_lut(settings, &id_for_name, |l| l.name = v);
+                                edit_metadata(settings, &id_name, |x| x.name = v);
                             },
                         }
                     }
                     div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblLutFile")} }
-                        div { class: "manager-row",
-                            input {
-                                class: "input",
-                                value: "{cur.path}",
-                                oninput: move |e| {
-                                    let v = e.value();
-                                    edit_lut(settings, &id_for_path, |l| l.path = v);
-                                },
-                            }
-                            button {
-                                class: "btn",
-                                onclick: move |_| {
-                                    let id = id_for_browse.clone();
-                                    spawn(async move {
-                                        if let Some(f) = rfd::AsyncFileDialog::new().add_filter("LUT", &["cube"]).pick_file().await {
-                                            let v = f.path().display().to_string();
-                                            edit_lut(settings, &id, |l| l.path = v);
-                                        }
-                                    });
-                                },
-                                Icon { width: 14, height: 14, icon: LdFolderOpen }
-                                "{s_browse}"
-                            }
-                        }
-                        if !cur.file_exists() {
-                            p { class: "hint warn", {t("msgLutMissing")} }
+                        label { class: "dlg-field-label", "{s_mode}" }
+                        select {
+                            class: "select",
+                            value: if m.mode == Mode::Delete { "delete" } else { "keep" },
+                            onchange: move |e| {
+                                let mode = if e.value() == "delete" { Mode::Delete } else { Mode::Keep };
+                                edit_metadata(settings, &id_mode, |x| x.mode = mode);
+                            },
+                            option { value: "keep", selected: m.mode == Mode::Keep, "{s_mode_keep}" }
+                            option { value: "delete", selected: m.mode == Mode::Delete, "{s_mode_delete}" }
                         }
                     }
-                    p { class: "hint", {t("msgLutHint")} }
+                    MetaNamesField { settings, id: cur_id.clone(), lang: lang.clone(), mode: m.mode }
+                    div { class: "dlg-field",
+                        label { class: "check-label",
+                            input {
+                                class: "check-box",
+                                r#type: "checkbox",
+                                checked: m.remove_chapters,
+                                onchange: move |e| {
+                                    let v = e.checked();
+                                    edit_metadata(settings, &id_chapters, |x| x.remove_chapters = v);
+                                },
+                            }
+                            "{s_chapters}"
+                        }
+                    }
+                  }
                 }
             }
         }
@@ -1298,525 +1437,24 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
     }
 }
 
-/// Apply `edit` to the effects entry with this id and keep it inside what an entry can be.
-fn edit_effects(mut settings: Signal<Settings>, id: &str, edit: impl FnOnce(&mut EffectsEntry)) {
-    let mut s = settings.write();
-    if let Some(e) = s.effects.iter_mut().find(|e| e.id == id) {
-        edit(e);
-        *e = e.clone().normalized();
-    }
-}
-
-/// One effect of the entry as a card: its title, its fields, and the button that removes it. Being on the
-/// page means it is on; removing it is turning it off.
+/// The Notifications tab of Settings.
 #[component]
-fn EffectCard(label: String, remove: String, on_remove: EventHandler<()>, #[props(default)] children: Element) -> Element {
-    rsx! {
-        details { class: "manager-advanced", open: true,
-            summary { span { class: "dlg-title", "{label}" } }
-            div { class: "manager-advanced-body",
-                {children}
-                div { class: "manager-actions",
-                    button {
-                        class: "btn icon",
-                        title: "{remove}",
-                        "aria-label": "{remove}",
-                        onclick: move |_| on_remove.call(()),
-                        Icon { width: 14, height: 14, icon: LdTrash2 }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn corner_label(c: Corner, lang: &str) -> String {
-    let t = |key: &str| i18n::t(lang, key);
-    match c {
-        Corner::TopLeft => t("lblFxTopLeft"),
-        Corner::TopRight => t("lblFxTopRight"),
-        Corner::BottomLeft => t("lblFxBottomLeft"),
-        Corner::BottomRight => t("lblFxBottomRight"),
-    }
-}
-
-fn rotation_label(r: Rotation, lang: &str) -> String {
-    let t = |key: &str| i18n::t(lang, key);
-    match r {
-        // Never offered: "no turn" is an entry without the effect.
-        Rotation::None => String::new(),
-        Rotation::Cw => t("lblRotCw"),
-        Rotation::Ccw => t("lblRotCcw"),
-        Rotation::CwFlip => t("lblRotCwFlip"),
-        Rotation::CcwFlip => t("lblRotCcwFlip"),
-        Rotation::Half => t("lblRotHalf"),
-        Rotation::FlipH => t("lblRotFlipH"),
-        Rotation::FlipV => t("lblRotFlipV"),
-    }
-}
-
-fn kind_label(k: Kind, lang: &str) -> String {
-    let t = |key: &str| i18n::t(lang, key);
-    match k {
-        Kind::Deinterlace => t("lblFxDeinterlace"),
-        Kind::Crop => t("lblFxCrop"),
-        Kind::Fps => t("lblFxFps"),
-        Kind::Strip => t("lblFxStrip"),
-        Kind::Rotate => t("lblFxRotate"),
-        Kind::BlurFit => t("lblFxBlurFit"),
-        Kind::Burn => t("lblFxBurn"),
-        Kind::Stereo => t("lblFxStereo"),
-        Kind::Reverse => t("lblFxReverse"),
-        Kind::Watermark => t("lblFxWatermark"),
-        Kind::Text => t("lblFxText"),
-    }
-}
-
-/// The fields of one effect, written back to the entry at once.
-#[component]
-fn EffectItem(settings: Signal<Settings>, id: String, lang: String, item: Effect) -> Element {
-    let t = |key: &str| i18n::t(&lang, key);
-    let s_remove = t("tipFxRemove");
-    let kind = item.kind();
-    let (id_remove, id_a, id_b, id_c, id_d, id_e, id_f) = (id.clone(), id.clone(), id.clone(), id.clone(), id.clone(), id.clone(), id.clone());
-    let corner_options: Vec<(String, String)> = Corner::ALL.iter().map(|c| (c.id().to_owned(), corner_label(*c, &lang))).collect();
-    let corner_options_b = corner_options.clone();
-
-    rsx! {
-        EffectCard {
-            label: kind_label(kind, &lang),
-            remove: s_remove,
-            on_remove: move |_| edit_effects(settings, &id_remove, |e| e.items.retain(|x| x.kind() != kind)),
-            match item {
-                Effect::Rotate { rotation } => rsx! {
-                    ChoiceField {
-                        label: t("lblFxTurn"),
-                        value: rotation.id().to_owned(),
-                        options: Rotation::ALL.iter().filter(|r| **r != Rotation::None).map(|r| (r.id().to_owned(), rotation_label(*r, &lang))).collect::<Vec<_>>(),
-                        on_change: move |v: String| {
-                            if let Some(r) = Rotation::from_id(&v).filter(|r| *r != Rotation::None) {
-                                edit_effects(settings, &id_a, |e| {
-                                    for x in &mut e.items {
-                                        if let Effect::Rotate { rotation } = x {
-                                            *rotation = r;
-                                        }
-                                    }
-                                });
-                            }
-                        },
-                    }
-                },
-                Effect::Deinterlace => rsx! {
-                    p { class: "hint", {t("msgFxDeinterlaceHint")} }
-                },
-                Effect::Strip => rsx! {
-                    p { class: "hint", {t("msgFxStripHint")} }
-                },
-                Effect::Fps(f) => rsx! {
-                    ChoiceField {
-                        label: t("lblFxFpsRate"),
-                        value: f.value.clone(),
-                        options: FRAME_RATES.iter().map(|(label, value)| (value.to_string(), format!("{label} fps"))).collect::<Vec<_>>(),
-                        on_change: move |v: String| edit_effects(settings, &id_a, |e| {
-                            for x in &mut e.items {
-                                if let Effect::Fps(f) = x {
-                                    f.value = v.clone();
-                                }
-                            }
-                        }),
-                    }
-                },
-                Effect::Crop(c) => rsx! {
-                    NumberField {
-                        label: t("lblFxCropLeft"),
-                        value: c.left,
-                        min: 0,
-                        max: Crop::MAX,
-                        unit: "px".to_owned(),
-                        on_change: move |v: u32| edit_crop(settings, &id_a, |c| c.left = v),
-                    }
-                    NumberField {
-                        label: t("lblFxCropRight"),
-                        value: c.right,
-                        min: 0,
-                        max: Crop::MAX,
-                        unit: "px".to_owned(),
-                        on_change: move |v: u32| edit_crop(settings, &id_b, |c| c.right = v),
-                    }
-                    NumberField {
-                        label: t("lblFxCropTop"),
-                        value: c.top,
-                        min: 0,
-                        max: Crop::MAX,
-                        unit: "px".to_owned(),
-                        on_change: move |v: u32| edit_crop(settings, &id_c, |c| c.top = v),
-                    }
-                    NumberField {
-                        label: t("lblFxCropBottom"),
-                        value: c.bottom,
-                        min: 0,
-                        max: Crop::MAX,
-                        unit: "px".to_owned(),
-                        on_change: move |v: u32| edit_crop(settings, &id_d, |c| c.bottom = v),
-                    }
-                    p { class: "hint", {t("msgFxCropHint")} }
-                },
-                Effect::BlurFit(b) => rsx! {
-                    NumberField {
-                        label: t("lblFxBlurHeight"),
-                        value: b.height,
-                        min: 120,
-                        max: 4320,
-                        unit: "px".to_owned(),
-                        on_change: move |v: u32| edit_blur(settings, &id_a, |b| b.height = v),
-                    }
-                    NumberField {
-                        label: t("lblFxBlurSigma"),
-                        value: b.blur,
-                        min: 1,
-                        max: 100,
-                        on_change: move |v: u32| edit_blur(settings, &id_b, |b| b.blur = v),
-                    }
-                    p { class: "hint", {t("msgFxBlurFitHint")} }
-                },
-                Effect::Burn => rsx! {
-                    p { class: "hint", {t("msgFxBurnHint")} }
-                },
-                Effect::Stereo => rsx! {
-                    p { class: "hint", {t("msgFxStereoHint")} }
-                },
-                Effect::Reverse => rsx! {
-                    p { class: "hint", {t("msgFxReverseHint")} }
-                },
-                Effect::Watermark(w) => {
-                    let missing = !w.file_exists();
-                    let s_browse = t("btnDstBrowse");
-                    rsx! {
-                        div { class: "dlg-field",
-                            label { class: "dlg-field-label", {t("lblFxImage")} }
-                            div { class: "manager-row",
-                                input {
-                                    class: "input",
-                                    value: "{w.path}",
-                                    oninput: move |ev| {
-                                        let v = ev.value();
-                                        edit_watermark(settings, &id_a, |w| w.path = v);
-                                    },
-                                }
-                                button {
-                                    class: "btn",
-                                    onclick: move |_| {
-                                        let id = id_f.clone();
-                                        spawn(async move {
-                                            let filter = ["png", "jpg", "jpeg", "webp", "bmp"];
-                                            if let Some(f) = rfd::AsyncFileDialog::new().add_filter("Image", &filter).pick_file().await {
-                                                let v = f.path().display().to_string();
-                                                edit_watermark(settings, &id, |w| w.path = v);
-                                            }
-                                        });
-                                    },
-                                    Icon { width: 14, height: 14, icon: LdFolderOpen }
-                                    "{s_browse}"
-                                }
-                            }
-                            if missing && !w.path.is_empty() {
-                                p { class: "hint warn", {t("msgLutMissing")} }
-                            }
-                        }
-                        ChoiceField {
-                            label: t("lblFxCorner"),
-                            value: w.corner.id().to_owned(),
-                            options: corner_options,
-                            on_change: move |v: String| {
-                                if let Some(c) = Corner::from_id(&v) {
-                                    edit_watermark(settings, &id_b, |w| w.corner = c);
-                                }
-                            },
-                        }
-                        NumberField {
-                            label: t("lblFxMargin"),
-                            value: w.margin,
-                            min: 0,
-                            max: 2000,
-                            unit: "px".to_owned(),
-                            on_change: move |v: u32| edit_watermark(settings, &id_c, |w| w.margin = v),
-                        }
-                        OptionalNumberField {
-                            label: t("lblFxWidth"),
-                            value: w.width,
-                            min: 16,
-                            max: 4096,
-                            placeholder: t("lblSizeNoLimit"),
-                            unit: "px".to_owned(),
-                            on_change: move |v: Option<u32>| edit_watermark(settings, &id_d, |w| w.width = v),
-                        }
-                        NumberField {
-                            label: t("lblFxOpacity"),
-                            value: w.opacity,
-                            min: 10,
-                            max: 100,
-                            unit: "%".to_owned(),
-                            on_change: move |v: u32| edit_watermark(settings, &id_e, |w| w.opacity = v),
-                        }
-                    }
-                }
-                Effect::Text(tx) => rsx! {
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblFxText")} }
-                        input {
-                            class: "input",
-                            value: "{tx.text}",
-                            oninput: move |ev| {
-                                let v = ev.value();
-                                edit_text(settings, &id_a, |x| x.text = v);
-                            },
-                        }
-                        p { class: "hint", {t("msgFxTextHint")} }
-                    }
-                    ChoiceField {
-                        label: t("lblFxCorner"),
-                        value: tx.corner.id().to_owned(),
-                        options: corner_options_b,
-                        on_change: move |v: String| {
-                            if let Some(c) = Corner::from_id(&v) {
-                                edit_text(settings, &id_b, |x| x.corner = c);
-                            }
-                        },
-                    }
-                    NumberField {
-                        label: t("lblFxMargin"),
-                        value: tx.margin,
-                        min: 0,
-                        max: 2000,
-                        unit: "px".to_owned(),
-                        on_change: move |v: u32| edit_text(settings, &id_c, |x| x.margin = v),
-                    }
-                    NumberField {
-                        label: t("lblFxTextSize"),
-                        value: tx.size,
-                        min: 1,
-                        max: 20,
-                        unit: "%".to_owned(),
-                        on_change: move |v: u32| edit_text(settings, &id_d, |x| x.size = v),
-                    }
-                    div { class: "dlg-field",
-                        label { class: "check-label",
-                            input {
-                                class: "check-box",
-                                r#type: "checkbox",
-                                checked: tx.boxed,
-                                onchange: move |ev| {
-                                    let on = ev.checked();
-                                    edit_text(settings, &id_e, |x| x.boxed = on);
-                                },
-                            }
-                            {t("lblFxTextBox")}
-                        }
-                    }
-                },
-            }
-        }
-    }
-}
-
-fn edit_crop(settings: Signal<Settings>, id: &str, f: impl FnOnce(&mut Crop)) {
-    edit_effects(settings, id, |e| {
-        for x in &mut e.items {
-            if let Effect::Crop(c) = x {
-                f(c);
-                break;
-            }
-        }
-    });
-}
-
-fn edit_blur(settings: Signal<Settings>, id: &str, f: impl FnOnce(&mut BlurFit)) {
-    edit_effects(settings, id, |e| {
-        for x in &mut e.items {
-            if let Effect::BlurFit(b) = x {
-                f(b);
-                break;
-            }
-        }
-    });
-}
-
-fn edit_watermark(settings: Signal<Settings>, id: &str, f: impl FnOnce(&mut Watermark)) {
-    edit_effects(settings, id, |e| {
-        for x in &mut e.items {
-            if let Effect::Watermark(w) = x {
-                f(w);
-                break;
-            }
-        }
-    });
-}
-
-fn edit_text(settings: Signal<Settings>, id: &str, f: impl FnOnce(&mut TextOverlay)) {
-    edit_effects(settings, id, |e| {
-        for x in &mut e.items {
-            if let Effect::Text(t) = x {
-                f(t);
-                break;
-            }
-        }
-    });
-}
-
-/// The effects editor, a page of the Settings view: the entries on the left; on the right the name of the
-/// selected one and a card for each effect it holds, with a menu that adds the kinds it does not have yet.
-#[component]
-pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
-    let mut selected = use_signal(|| settings.read().effects_id.clone());
-    let mut dragging = use_signal(|| Option::<String>::None);
-
+pub fn NotifyEditor(settings: Signal<Settings>) -> Element {
     let lang = settings.read().lang.clone();
-    let t = |key: &str| i18n::t(&lang, key);
-
-    let entries = settings.read().effects.clone();
-    let current = entries.iter().find(|e| e.id == selected()).or(entries.first()).cloned();
-    let cur_id = current.as_ref().map(|e| e.id.clone()).unwrap_or_default();
-
-    let s_new = t("btnMngNew");
-    let s_dup = t("btnMngDuplicate");
-    let s_del = t("btnMngDelete");
-    let s_reorder = t("msgMngReorderHint");
-    let s_add = t("lblFxAdd");
-
-    let id_for_dup = cur_id.clone();
-    let id_for_del = cur_id.clone();
-    let id_for_name = cur_id.clone();
-    let id_for_add = cur_id.clone();
-
+    let s_notify = i18n::t(&lang, "lblStgNotify");
+    let on = settings.read().notify;
     rsx! {
         div { class: "manager",
-            div { class: "manager-list",
-                div { class: "manager-actions",
-                    button {
-                        class: "btn icon",
-                        title: "{s_new}",
-                        "aria-label": "{s_new}",
-                        onclick: move |_| {
-                            let e = EffectsEntry::new(&s_new);
-                            selected.set(e.id.clone());
-                            settings.write().effects.push(e);
-                        },
-                        Icon { width: 14, height: 14, icon: LdPlus }
-                    }
-                    button {
-                        class: "btn icon",
-                        title: "{s_dup}",
-                        "aria-label": "{s_dup}",
-                        disabled: current.is_none(),
-                        onclick: move |_| {
-                            let src = settings.read().effects.iter().find(|e| e.id == id_for_dup).cloned();
-                            if let Some(mut e) = src {
-                                e.id = engine::preset::new_id();
-                                e.name = format!("{} 2", e.name);
-                                selected.set(e.id.clone());
-                                settings.write().effects.push(e);
-                            }
-                        },
-                        Icon { width: 14, height: 14, icon: LdCopy }
-                    }
-                    button {
-                        class: "btn icon",
-                        title: "{s_del}",
-                        "aria-label": "{s_del}",
-                        disabled: current.is_none(),
-                        onclick: move |_| {
-                            settings.write().effects.retain(|e| e.id != id_for_del);
-                            let fixed = settings.read().clone().repaired();
-                            selected.set(fixed.effects.first().map(|e| e.id.clone()).unwrap_or_default());
-                            settings.set(fixed);
-                        },
-                        Icon { width: 14, height: 14, icon: LdTrash2 }
-                    }
-                }
-                div { class: "lv-scroll",
-                    for e in entries.iter() {
-                        {
-                            let id = e.id.clone();
-                            let id_down = e.id.clone();
-                            let id_over = e.id.clone();
-                            let active = e.id == cur_id;
-                            let moving = dragging().as_deref() == Some(e.id.as_str());
-                            rsx! {
-                                button {
-                                    key: "{e.id}",
-                                    class: match (active, moving) {
-                                        (_, true) => "lv-item reordering",
-                                        (true, _) => "lv-item active",
-                                        _ => "lv-item",
-                                    },
-                                    onpointerdown: move |ev| {
-                                        if ev.trigger_button() == Some(MouseButton::Primary) {
-                                            dragging.set(Some(id_down.clone()));
-                                        }
-                                    },
-                                    onpointerenter: move |ev| {
-                                        let Some(from) = dragging() else { return };
-                                        if !ev.held_buttons().contains(MouseButton::Primary) {
-                                            dragging.set(None);
-                                            return;
-                                        }
-                                        reorder(&mut settings.write().effects, |e| e.id.as_str(), &from, &id_over);
-                                    },
-                                    onpointerup: move |_| dragging.set(None),
-                                    onclick: move |_| {
-                                        selected.set(id.clone());
-                                        settings.write().effects_id = id.clone();
-                                    },
-                                    div { class: "lv-item-body",
-                                        div { class: "lv-item-name", "{e.name}" }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                p { class: "hint", "{s_reorder}" }
-            }
-            // The key makes the fields remount when another entry is selected.
-            div { class: "manager-form", key: "{cur_id}",
-                if let Some(cur) = &current {
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblPrsName")} }
+            div { class: "manager-form",
+                div { class: "dlg-field",
+                    label { class: "check-label",
                         input {
-                            class: "input",
-                            value: "{cur.name}",
-                            oninput: move |ev| {
-                                let v = ev.value();
-                                edit_effects(settings, &id_for_name, |x| x.name = v);
-                            },
+                            class: "check-box",
+                            r#type: "checkbox",
+                            checked: on,
+                            onchange: move |e| settings.write().notify = e.checked(),
                         }
-                    }
-                    for item in cur.items.clone() {
-                        EffectItem { key: "{item.kind().id()}", settings, id: cur_id.clone(), lang: lang.clone(), item }
-                    }
-                    {
-                        let addable: Vec<Kind> = Kind::ALL.into_iter().filter(|k| cur.get(*k).is_none()).collect();
-                        rsx! {
-                            if !addable.is_empty() {
-                                div { class: "dlg-field",
-                                    select {
-                                        class: "select",
-                                        title: "{s_add}",
-                                        "aria-label": "{s_add}",
-                                        value: "",
-                                        onchange: move |ev| {
-                                            if let Some(k) = Kind::from_id(&ev.value()) {
-                                                edit_effects(settings, &id_for_add, |x| x.items.push(k.new_effect()));
-                                            }
-                                        },
-                                        option { value: "", selected: true, "{s_add}" }
-                                        for k in addable {
-                                            option { key: "{k.id()}", value: "{k.id()}", {kind_label(k, &lang)} }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        "{s_notify}"
                     }
                 }
             }

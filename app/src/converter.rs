@@ -7,15 +7,16 @@
 use crate::{
     catalog::{AppHeader, DropZone},
     i18n, manager,
-    runner::{DOWNLOAD, RUNNER, refresh_ffmpeg},
+    ffmpeg_panel::{FfmpegPopup, Popup, download_note, install, installed_version, is_current},
+    runner::{DOWNLOAD, LATEST, RUNNER, refresh_ffmpeg},
     settings::{RunChoice, Settings},
 };
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
-    icons::ld_icons::{LdDownload, LdFilePlus, LdFolder, LdFolderOpen, LdFolderPlus, LdFilm, LdListChecks, LdPalette, LdPlay, LdReplace, LdScaling, LdScissors, LdSlidersHorizontal, LdSparkles, LdSquare, LdVolume2, LdX},
+    icons::ld_icons::{LdEraser, LdFilePlus, LdFolder, LdFolderOpen, LdFolderPlus, LdFilm, LdListChecks, LdPlay, LdReplace, LdScaling, LdScissors, LdSlidersHorizontal, LdSparkles, LdSquare, LdVolume2, LdX},
 };
-use engine::{JobSpec, JobStatus, Overwrite, Trim, download::DownloadState};
+use engine::{JobSpec, JobStatus, Overwrite, Trim, download::{DownloadState, LatestState}};
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -50,8 +51,8 @@ enum TagKind {
     Preset,
     Size,
     Audio,
-    Lut,
     Effects,
+    Metadata,
     Trim,
     Folder,
     Overwrite,
@@ -65,8 +66,8 @@ fn RunTag(kind: TagKind, text: String, title: String) -> Element {
                 TagKind::Preset => rsx! { Icon { width: 14, height: 14, icon: LdSlidersHorizontal } },
                 TagKind::Size => rsx! { Icon { width: 14, height: 14, icon: LdScaling } },
                 TagKind::Audio => rsx! { Icon { width: 14, height: 14, icon: LdVolume2 } },
-                TagKind::Lut => rsx! { Icon { width: 14, height: 14, icon: LdPalette } },
                 TagKind::Effects => rsx! { Icon { width: 14, height: 14, icon: LdSparkles } },
+                TagKind::Metadata => rsx! { Icon { width: 14, height: 14, icon: LdEraser } },
                 TagKind::Trim => rsx! { Icon { width: 14, height: 14, icon: LdScissors } },
                 TagKind::Folder => rsx! { Icon { width: 14, height: 14, icon: LdFolder } },
                 TagKind::Overwrite => rsx! { Icon { width: 14, height: 14, icon: LdReplace } },
@@ -97,6 +98,16 @@ fn run_summary<'a>(statuses: impl Iterator<Item = &'a JobStatus>, lang: &str) ->
     parts.join(" · ")
 }
 
+/// One operating-system notice for a finished run. A run that was only cancelled says nothing.
+fn notify_finished(snap: &HashMap<u64, JobStatus>, lang: &str) {
+    let body = run_summary(snap.values(), lang);
+    if body.is_empty() {
+        return;
+    }
+    let title = i18n::t(lang, "ttlMainNotify");
+    std::thread::spawn(move || crate::notify::show(&title, &body));
+}
+
 #[component]
 pub fn Converter(
     settings: Signal<Settings>,
@@ -111,6 +122,21 @@ pub fn Converter(
     let mut statuses = use_signal(HashMap::<u64, JobStatus>::new);
     let mut download = use_signal(|| DownloadState::Idle);
     let mut ffmpeg_ready = use_signal(|| RUNNER.ffmpeg().is_some());
+    // The ffmpeg installed now; what the yaiol site says the compatible one is (asked once at launch) is read straight
+    // from LATEST by the poll below.
+    let mut installed = use_signal(installed_version);
+    // The popup the user closed (a failure, a newer version offered): it stays closed until an install starts again.
+    let mut dismissed = use_signal(|| false);
+    let mut pick_nonce = use_signal(|| 0u32);
+    use_hook(|| {
+        // Which ffmpeg is the compatible one. Asked on every machine: the app cannot keep its ffmpeg right without
+        // the answer, so this is not the optional request the dev-machine switch exists to silence.
+        LATEST.check();
+        // Nothing installed: install it now, there is nothing for the user to decide.
+        if !*ffmpeg_ready.peek() {
+            install();
+        }
+    });
     // The part of each file to keep. NOT saved with the settings: a cut left over from yesterday would
     // quietly shorten every file converted tomorrow.
     let mut trim_start = use_signal(String::new);
@@ -122,18 +148,41 @@ pub fn Converter(
     // The window polls the runner and the download; the engine never calls back into it. Only a
     // CHANGED snapshot is written, so an idle queue does not re-render the list five times a second.
     use_future(move || async move {
+        // A newer approved ffmpeg is installed by itself, once per launch (the popup says "Updating").
+        let mut update_tried = false;
+        let mut was_active = false;
         loop {
             tokio::time::sleep(Duration::from_millis(200)).await;
             let snap: HashMap<u64, JobStatus> = RUNNER.snapshot().into_iter().collect();
+            // A run just ended: tell the user, whichever window they are looking at.
+            let active = snap.values().any(JobStatus::is_active);
+            if was_active && !active && settings.peek().notify {
+                notify_finished(&snap, &settings.peek().lang);
+            }
+            was_active = active;
             if *statuses.peek() != snap {
                 statuses.set(snap);
             }
             let dl = DOWNLOAD.snapshot();
+            if dl.is_active() && *dismissed.peek() {
+                dismissed.set(false);
+            }
             if *download.peek() != dl {
                 if matches!(dl, DownloadState::Done(_)) {
                     ffmpeg_ready.set(refresh_ffmpeg(&RUNNER));
+                    installed.set(installed_version());
                 }
                 download.set(dl);
+            }
+            if let LatestState::Known(m) = LATEST.snapshot() {
+                if !update_tried
+                    && *ffmpeg_ready.peek()
+                    && !is_current(&m)
+                    && !DOWNLOAD.snapshot().is_active()
+                {
+                    update_tried = true;
+                    install();
+                }
             }
         }
     });
@@ -250,9 +299,9 @@ pub fn Converter(
                     overwrite: run.overwrite,
                     size: s.size_by(&run.size_id),
                     audio: s.audio_by(&run.audio_id),
-                    lut: s.lut_by(&run.lut_id),
                     trim: Trim::parse(&run.trim_start, &run.trim_end)?,
                     effects: s.effects_by(&run.effects_id),
+                    metadata: s.metadata_by(&run.metadata_id),
                 })
             })
             .collect();
@@ -300,15 +349,15 @@ pub fn Converter(
     let sel_preset = s.selected_preset();
     let mut audio_options: Vec<(String, String)> = vec![(engine::audio::ORIGINAL_ID.to_owned(), t("lblMainAudioOriginal"))];
     audio_options.extend(s.audios.iter().filter(|a| a.available_for(&sel_preset)).map(|a| (a.id.clone(), a.name.clone())));
-    let mut lut_options: Vec<(String, String)> = vec![(engine::lut::NONE_ID.to_owned(), t("lblMainLutNone"))];
-    lut_options.extend(s.luts.iter().map(|l| (l.id.clone(), l.name.clone())));
-    let lut_id = s.lut_id.clone();
     let mut effects_options: Vec<(String, String)> = vec![(engine::effects::NONE_ID.to_owned(), t("lblMainEffectsNone"))];
     effects_options.extend(s.effects.iter().map(|e| (e.id.clone(), e.name.clone())));
     let effects_id = s.effects_id.clone();
+    let metadata_options: Vec<(String, String)> = s.metadata.iter().map(|m| (m.id.clone(), m.name.clone())).collect();
+    let metadata_id = s.metadata_id.clone();
     let audio_id = s.effective_audio_id();
     let mut dest_options: Vec<(String, String)> = vec![(engine::destination::SOURCE_ID.to_owned(), t("lblMainDestSource"))];
     dest_options.extend(s.destinations.iter().map(|d| (d.id.clone(), d.name.clone())));
+    dest_options.push((engine::destination::PICK_ID.to_owned(), t("lblMainDestPick")));
     let destination_id = s.destination_id.clone();
     let saved_folder = s.destination_by(&s.destination_id).folder_path();
     let parallel = s.parallel;
@@ -325,13 +374,13 @@ pub fn Converter(
     let s_main_size = t("tipMainSize");
     let s_main_audio = t("tipMainAudio");
     let s_main_edit_audio = t("tipMainEditAudio");
-    let s_main_lut = t("tipMainLut");
     let s_main_trim = t("tipMainTrim");
     let s_main_trim_start = t("lblMainTrimStart");
     let s_main_trim_end = t("lblMainTrimEnd");
     let s_main_effects = t("tipMainEffects");
     let s_main_edit_effects = t("tipMainEditEffects");
-    let s_main_edit_luts = t("tipMainEditLuts");
+    let s_main_metadata = t("tipMainMetadata");
+    let s_main_edit_metadata = t("tipMainEditMetadata");
     let s_main_edit_sizes = t("tipMainEditSizes");
     let s_main_destination = t("tipMainDestination");
     let s_main_edit_destinations = t("tipMainEditDestinations");
@@ -341,7 +390,6 @@ pub fn Converter(
     let s_main_overwrite_rename = t("lblMainOverwriteRename");
     let s_main_parallel = t("tipMainParallel");
     let s_main_open_output = t("tipMainOpenOutput");
-    let s_main_download = t("btnMainDownloadFfmpeg");
     let s_main_apply = t("btnMainApply");
     let s_main_apply_tip = t("tipMainApply");
     let sel_now = selected.read().clone();
@@ -356,7 +404,9 @@ pub fn Converter(
         let st = statuses.read();
         let total = items.read().len();
         let touched = items.read().iter().filter(|i| st.contains_key(&i.id)).count();
-        if trim_invalid {
+        if ffmpeg_missing && !download().is_active() {
+            t("msgMainNoFfmpeg")
+        } else if trim_invalid {
             t("msgMainTrimInvalid")
         } else if total == 0 {
             String::new()
@@ -377,17 +427,19 @@ pub fn Converter(
         status_text
     };
 
-    // What the ffmpeg note says: nothing found yet, the download's progress, or why it failed.
-    let note = match download() {
-        DownloadState::Downloading { done, total } => {
-            let mb = |n: u64| (n / (1024 * 1024)).to_string();
-            t("msgMainDownloading").replace("{done}", &mb(done)).replace("{total}", &total.map_or_else(|| "?".to_owned(), mb))
-        }
-        DownloadState::Verifying | DownloadState::Unpacking => t("msgMainDownloadFinishing"),
-        DownloadState::Failed(reason) => t("msgMainDownloadFailed").replace("{reason}", &reason),
-        _ => t("msgMainNoFfmpeg"),
-    };
+    // The ffmpeg popup: the install's progress, or why it failed. An ffmpeg already in place being replaced is an
+    // update; with none, an install.
     let downloading = download().is_active();
+    let update = ffmpeg_ready();
+    let popup = if downloading {
+        download_note(&lang, &download()).map(|text| Popup::Progress { text, update })
+    } else if dismissed() {
+        None
+    } else if matches!(download(), DownloadState::Failed(_)) {
+        download_note(&lang, &download()).map(|text| Popup::Failed { text, update })
+    } else {
+        None
+    };
 
     // Where "open the output folder" goes: the folder of the newest finished file - which is right
     // for "beside the source" too - and otherwise the chosen folder.
@@ -444,23 +496,8 @@ pub fn Converter(
             {children}
         div { class: "converter-body",
         div { class: "converter-main",
-        if ffmpeg_missing {
-            div { class: "workspace-empty converter-note",
-                span { "{note}" }
-                if !downloading {
-                    button {
-                        class: "btn",
-                        title: "{s_main_download}",
-                        onclick: move |_| {
-                            if let Some(dir) = crate::settings::ffmpeg_dir() {
-                                DOWNLOAD.start(dir);
-                            }
-                        },
-                        Icon { width: 14, height: 14, icon: LdDownload }
-                        " {s_main_download}"
-                    }
-                }
-            }
+        if let Some(popup) = popup {
+            FfmpegPopup { lang: lang.clone(), popup, on_close: move |_| dismissed.set(true) }
         }
         // ⚠ CLAUDE: tabindex makes the list the thing a click focuses, which is what lets Ctrl+A reach it;
         // a click on the empty part clears the selection (a row's own click stops here).
@@ -506,11 +543,13 @@ pub fn Converter(
                     if r.audio_id != engine::audio::ORIGINAL_ID {
                         tags.push((TagKind::Audio, cfg.audio_by(&r.audio_id).name, s_main_audio.clone()));
                     }
-                    if r.lut_id != engine::lut::NONE_ID {
-                        tags.push((TagKind::Lut, cfg.lut_by(&r.lut_id).name, s_main_lut.clone()));
-                    }
                     if r.effects_id != engine::effects::NONE_ID {
                         tags.push((TagKind::Effects, cfg.effects_by(&r.effects_id).name, s_main_effects.clone()));
+                    }
+                    // What keeps every tag and chapter is left out of the chips, like the other choices that change nothing.
+                    let cleaning = cfg.metadata_by(&r.metadata_id);
+                    if !cleaning.removes_nothing() {
+                        tags.push((TagKind::Metadata, cleaning.name, s_main_metadata.clone()));
                     }
                     if !r.trim_start.trim().is_empty() || !r.trim_end.trim().is_empty() {
                         tags.push((TagKind::Trim, format!("{}–{}", r.trim_start.trim(), r.trim_end.trim()), s_main_trim.clone()));
@@ -649,20 +688,20 @@ pub fn Converter(
             div { class: "barh-grp",
                 select {
                     class: "select",
-                    title: "{s_main_lut}",
-                    "aria-label": "{s_main_lut}",
-                    value: "{lut_id}",
-                    onchange: move |e| settings.write().lut_id = e.value(),
-                    for (id, name) in lut_options {
-                        option { key: "{id}", value: "{id}", selected: id == lut_id, "{name}" }
+                    title: "{s_main_metadata}",
+                    "aria-label": "{s_main_metadata}",
+                    value: "{metadata_id}",
+                    onchange: move |e| settings.write().metadata_id = e.value(),
+                    for (id, name) in metadata_options {
+                        option { key: "{id}", value: "{id}", selected: id == metadata_id, "{name}" }
                     }
                 }
                 button {
                     class: "btn icon",
-                    title: "{s_main_edit_luts}",
-                    "aria-label": "{s_main_edit_luts}",
-                    onclick: move |_| on_manage.call(manager::LUTS.to_owned()),
-                    Icon { width: 14, height: 14, icon: LdPalette }
+                    title: "{s_main_edit_metadata}",
+                    "aria-label": "{s_main_edit_metadata}",
+                    onclick: move |_| on_manage.call(manager::METADATA.to_owned()),
+                    Icon { width: 14, height: 14, icon: LdEraser }
                 }
             }
             div { class: "barh-grp",
@@ -707,8 +746,27 @@ pub fn Converter(
                     class: "select",
                     title: "{s_main_destination}",
                     "aria-label": "{s_main_destination}",
+                    // A new key rebuilds the box after the folder picker closes: cancelled, it must not go on
+                    // showing the pick entry as if it were the choice.
+                    key: "{pick_nonce}",
                     value: "{destination_id}",
-                    onchange: move |e| settings.write().destination_id = e.value(),
+                    onchange: move |e| {
+                        let chosen = e.value();
+                        if chosen == engine::destination::PICK_ID {
+                            // Owned by the app's window: opened from the drop-down's own pop-up, a dialog without
+                            // an owner came up BEHIND the window.
+                            let window = dioxus::desktop::window();
+                            spawn(async move {
+                                if let Some(dir) = rfd::AsyncFileDialog::new().set_parent(&window.window).pick_folder().await {
+                                    let id = settings.write().destination_for_folder(dir.path());
+                                    settings.write().destination_id = id;
+                                }
+                                pick_nonce += 1;
+                            });
+                        } else {
+                            settings.write().destination_id = chosen;
+                        }
+                    },
                     for (id, name) in dest_options {
                         option { key: "{id}", value: "{id}", selected: id == destination_id, "{name}" }
                     }

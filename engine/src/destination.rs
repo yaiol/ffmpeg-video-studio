@@ -17,6 +17,10 @@ pub enum Overwrite {
 /// Id of the window-only choice that writes beside each source file. Not an entry of Settings; the window names it.
 pub const SOURCE_ID: &str = "source";
 
+/// Id of the window-only choice that opens the system's folder picker. Like `SOURCE_ID`, not an entry of Settings:
+/// what it picks becomes an ordinary saved destination (`Destination::for_folder`).
+pub const PICK_ID: &str = "pick";
+
 /// A saved destination: a name and the folder it writes into. Empty = beside each file; absolute = one folder
 /// for every file; relative (`convert`, `.\convert`, `..\convert`) = counted from each file's own folder.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -35,6 +39,18 @@ impl Destination {
 
     pub fn new(name: &str) -> Destination {
         Destination { id: crate::preset::new_id(), name: name.to_owned(), folder: String::new() }
+    }
+
+    /// The destination for a folder the user picked: named after the folder (its own name, or the whole path for a
+    /// drive root, which has none), writing there.
+    pub fn for_folder(dir: &Path) -> Destination {
+        let name = dir.file_name().map_or_else(|| dir.display().to_string(), |n| n.to_string_lossy().into_owned());
+        Destination { id: crate::preset::new_id(), name, folder: dir.display().to_string() }
+    }
+
+    /// Whether this destination writes into `dir`.
+    pub fn writes_to(&self, dir: &Path) -> bool {
+        self.folder_path().is_some_and(|f| same_file(&f, dir))
     }
 
     pub fn is_source(&self) -> bool {
@@ -159,6 +175,15 @@ pub fn resolve_output(folder: Option<&Path>, input: &Path, root: Option<&Path>, 
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn a_picked_folder_gives_a_destination_named_after_it() {
+        let d = Destination::for_folder(Path::new(r"D:\Out\Reels"));
+        assert_eq!(d.name, if cfg!(windows) { "Reels" } else { r"D:\Out\Reels" });
+        assert!(d.writes_to(Path::new(r"D:\Out\Reels")));
+        assert!(!d.writes_to(Path::new(r"D:\Out")));
+        assert!(!Destination::source().writes_to(Path::new(r"D:\Out")), "beside each file writes into no folder");
+    }
 
     fn scratch(name: &str) -> PathBuf {
         let p = std::env::temp_dir().join(format!("yaiol-vdcv-dest-{}-{name}", std::process::id()));

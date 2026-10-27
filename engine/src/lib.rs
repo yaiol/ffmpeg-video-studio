@@ -8,10 +8,10 @@ pub mod destination;
 pub mod download;
 pub mod effects;
 pub mod ffmpeg;
-pub mod lut;
+pub mod ffmpeg_effects;
+pub mod metadata;
 pub mod preset;
 pub mod queue;
-pub mod rotate;
 pub mod size;
 pub mod trim;
 
@@ -20,8 +20,7 @@ pub use destination::{Destination, Overwrite};
 pub use effects::EffectsEntry;
 pub use preset::Preset;
 pub use queue::{JobSpec, JobStatus, Runner};
-pub use lut::Lut;
-pub use rotate::Rotation;
+pub use metadata::MetadataCleanup;
 pub use size::Size;
 pub use trim::Trim;
 

@@ -1,6 +1,6 @@
 [package]
 name = "video-converter"
-version = "1.0.0"
+version = "1.5.0"
 edition = "2024"
 description = "Video converter: drop files, pick a preset, convert. ffmpeg is the engine."
 
@@ -15,6 +15,7 @@ dioxus = { version = "0.7.10", features = ["desktop"] }
 dioxus-free-icons = { version = "0.10.0", features = ["lucide"] }
 dirs = "7.0.0"
 engine = { package = "video-converter-engine", path = "../engine" }
+notify-rust = "4.18.2"
 num_cpus = "1.17.0"
 open = "5.4.4"
 rfd = "0.17.2"

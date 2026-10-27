@@ -5,27 +5,34 @@
 
 mod catalog;
 mod converter;
+mod effects_editor;
+mod effects_form;
 mod i18n;
 mod icons;
+mod ffmpeg_panel;
 mod manager;
+mod notify;
 mod runner;
 mod settings;
 mod site;
 
 use catalog::{AppTab, GithubIcon, NewsLoader, NewsSetting, SettingsView, news};
 use converter::Converter;
-use manager::{AudioEditor, DestinationEditor, EffectsEditor, LutEditor, PresetEditor, SizeEditor};
+use ffmpeg_panel::FfmpegSetting;
+use effects_editor::EffectsEditor;
+use manager::{AudioEditor, DestinationEditor, MetadataEditor, NotifyEditor, PresetEditor, SizeEditor};
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
-    icons::ld_icons::{LdCircleHelp, LdFolder, LdPalette, LdScaling, LdSettings, LdSlidersHorizontal, LdSparkles, LdVolume2},
+    icons::ld_icons::{LdBell, LdCircleHelp, LdEraser, LdFolder, LdScaling, LdSettings, LdSlidersHorizontal, LdSparkles, LdVolume2},
 };
 
-const CSS: [&str; 4] = [
+const CSS: [&str; 5] = [
     include_str!("../assets/ui-colors.css"),
     include_str!("../assets/ui-app.css"),
     include_str!("../assets/ui-listview.css"),
     include_str!("../assets/app.css"),
+    include_str!("../assets/effects_form.css"),
 ];
 
 // ─── App identity - single source of truth: Cargo.toml (see build.rs) ───────────────────────────
@@ -125,6 +132,7 @@ fn App() -> Element {
         let s = settings.read();
         (s.lang.clone(), s.theme.clone())
     };
+    engine::effects::set_language(&lang);
     let t = |key: &str| i18n::t(&lang, key);
     let tip_help = t("tipHdrHelp");
     let tip_settings = t("tipHdrSettings");
@@ -132,9 +140,10 @@ fn App() -> Element {
     let tab_presets = t("tabStgPresets");
     let tab_sizes = t("tabStgSizes");
     let tab_audio = t("tabStgAudio");
-    let tab_luts = t("tabStgLuts");
     let tab_effects = t("tabStgEffects");
+    let tab_metadata = t("tabStgMetadata");
     let tab_destinations = t("tabStgDestinations");
+    let tab_notifications = t("tabStgNotifications");
 
     let version = app_version_build();
     let help_url = site::site_url(APP_ID, &lang, "help");
@@ -215,9 +224,9 @@ fn App() -> Element {
                                 icon: rsx! { Icon { width: 14, height: 14, icon: LdVolume2 } },
                             },
                             AppTab {
-                                key: manager::LUTS.to_owned(),
-                                label: tab_luts.clone(),
-                                icon: rsx! { Icon { width: 14, height: 14, icon: LdPalette } },
+                                key: manager::METADATA.to_owned(),
+                                label: tab_metadata.clone(),
+                                icon: rsx! { Icon { width: 14, height: 14, icon: LdEraser } },
                             },
                             AppTab {
                                 key: manager::EFFECTS.to_owned(),
@@ -229,6 +238,11 @@ fn App() -> Element {
                                 label: tab_destinations.clone(),
                                 icon: rsx! { Icon { width: 14, height: 14, icon: LdFolder } },
                             },
+                            AppTab {
+                                key: manager::NOTIFICATIONS.to_owned(),
+                                label: tab_notifications.clone(),
+                                icon: rsx! { Icon { width: 14, height: 14, icon: LdBell } },
+                            },
                         ],
                         initial_tab: settings_tab(),
                         on_tab: move |key: String| settings_tab.set(key),
@@ -239,12 +253,14 @@ fn App() -> Element {
                                 SizeEditor { settings }
                             } else if settings_tab() == manager::AUDIO {
                                 AudioEditor { settings }
-                            } else if settings_tab() == manager::LUTS {
-                                LutEditor { settings }
                             } else if settings_tab() == manager::EFFECTS {
                                 EffectsEditor { settings }
+                            } else if settings_tab() == manager::METADATA {
+                                MetadataEditor { settings }
                             } else if settings_tab() == manager::DESTINATIONS {
                                 DestinationEditor { settings }
+                            } else if settings_tab() == manager::NOTIFICATIONS {
+                                NotifyEditor { settings }
                             }
                         }),
                         general_extra: Some(rsx! {
@@ -256,6 +272,7 @@ fn App() -> Element {
                                     news_on.set(on);
                                 },
                             }
+                            FfmpegSetting { lang: lang.clone() }
                         }),
                     }
                 }

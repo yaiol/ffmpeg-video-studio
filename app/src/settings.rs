@@ -5,7 +5,7 @@
 //! The file name is plain (`settings.json`) — the folder is already per-app, so there is no
 //! storage-prefix to namespace it.
 
-use engine::{AudioEntry, Destination, EffectsEntry, Lut, Overwrite, Preset, Size, audio, destination::SOURCE_ID, effects, lut, size::ORIGINAL_ID};
+use engine::{AudioEntry, Destination, EffectsEntry, MetadataCleanup, Overwrite, Preset, Size, audio, destination::SOURCE_ID, effects, metadata, size::ORIGINAL_ID};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -30,15 +30,16 @@ pub struct Settings {
     pub audios: Vec<AudioEntry>,
     /// The selected audio entry; `original` when none.
     pub audio_id: String,
-    /// The user's colour LUTs. "(None)" is the window's own choice and is never stored; a fresh install has none.
-    pub luts: Vec<Lut>,
-    /// The selected LUT; `none` when none.
-    pub lut_id: String,
     /// The user's effects entries (a turn, a watermark, text). "(None)" is the window's own choice and is
     /// never stored; a fresh install gets one entry for each way of turning or flipping the picture.
     pub effects: Vec<EffectsEntry>,
     /// The selected entry; `none` when none.
     pub effects_id: String,
+    /// The user's metadata settings (which tags and chapters are left out). Never zero, like presets: a fresh install
+    /// has one that keeps everything.
+    pub metadata: Vec<MetadataCleanup>,
+    /// The selected one.
+    pub metadata_id: String,
     /// The user's destinations (a name and a folder). "Source Folder", beside each file, is the window's own
     /// choice and is never stored.
     pub destinations: Vec<Destination>,
@@ -47,6 +48,8 @@ pub struct Settings {
     pub overwrite: Overwrite,
     /// Conversions at once. A video encoder already uses every core, so the default is one.
     pub parallel: u32,
+    /// Show the operating system's notice when a run ends.
+    pub notify: bool,
 }
 
 impl Default for Settings {
@@ -62,14 +65,15 @@ impl Default for Settings {
             size_id: ORIGINAL_ID.to_owned(),
             audios: audio::defaults(),
             audio_id: audio::ORIGINAL_ID.to_owned(),
-            luts: Vec::new(),
-            lut_id: lut::NONE_ID.to_owned(),
             effects: effects::defaults(),
             effects_id: effects::NONE_ID.to_owned(),
+            metadata: metadata::defaults(),
+            metadata_id: metadata::STANDARD_ID.to_owned(),
             destinations: Vec::new(),
             destination_id: SOURCE_ID.to_owned(),
             overwrite: Overwrite::Skip,
             parallel: 1,
+            notify: true,
         }
     }
 }
@@ -98,13 +102,16 @@ impl Settings {
         if self.audio_id != audio::ORIGINAL_ID && !self.audios.iter().any(|a| a.id == self.audio_id) {
             self.audio_id = audio::ORIGINAL_ID.to_owned();
         }
-        self.luts = self.luts.into_iter().map(Lut::normalized).collect();
-        if self.lut_id != lut::NONE_ID && !self.luts.iter().any(|l| l.id == self.lut_id) {
-            self.lut_id = lut::NONE_ID.to_owned();
-        }
         self.effects = self.effects.into_iter().map(EffectsEntry::normalized).collect();
         if self.effects_id != effects::NONE_ID && !self.effects.iter().any(|e| e.id == self.effects_id) {
             self.effects_id = effects::NONE_ID.to_owned();
+        }
+        // The metadata entries keep what the user typed (the list is tidied when a job runs). Never zero.
+        if self.metadata.is_empty() {
+            self.metadata = metadata::defaults();
+        }
+        if !self.metadata.iter().any(|m| m.id == self.metadata_id) {
+            self.metadata_id = self.metadata[0].id.clone();
         }
         self.destinations = self.destinations.into_iter().map(Destination::normalized).collect();
         if self.destination_id != SOURCE_ID && !self.destinations.iter().any(|d| d.id == self.destination_id) {
@@ -114,19 +121,30 @@ impl Settings {
         self
     }
 
+    /// The id of the destination that writes into `dir`: one already saved for it, or a new entry named after the folder.
+    pub fn destination_for_folder(&mut self, dir: &Path) -> String {
+        if let Some(d) = self.destinations.iter().find(|d| d.writes_to(dir)) {
+            return d.id.clone();
+        }
+        let d = Destination::for_folder(dir);
+        let id = d.id.clone();
+        self.destinations.push(d);
+        id
+    }
+
     /// A destination by id; beside each file when there is none of that id.
     pub fn destination_by(&self, id: &str) -> Destination {
         self.destinations.iter().find(|d| d.id == id).cloned().unwrap_or_else(Destination::source)
     }
 
+    /// A metadata setting by id; the first when there is none of that id.
+    pub fn metadata_by(&self, id: &str) -> MetadataCleanup {
+        self.metadata.iter().find(|m| m.id == id).or(self.metadata.first()).cloned().unwrap_or_default()
+    }
+
     /// An effects entry by id; nothing when there is none of that id.
     pub fn effects_by(&self, id: &str) -> EffectsEntry {
         self.effects.iter().find(|e| e.id == id).cloned().unwrap_or_else(EffectsEntry::none)
-    }
-
-    /// A LUT by id; none when there is none of that id.
-    pub fn lut_by(&self, id: &str) -> Lut {
-        self.luts.iter().find(|l| l.id == id).cloned().unwrap_or_else(Lut::none)
     }
 
     /// An audio entry by id; the original rule when there is none of that id.
@@ -160,8 +178,8 @@ impl Settings {
             preset_id: self.preset_id.clone(),
             size_id: self.size_id.clone(),
             audio_id: self.effective_audio_id(),
-            lut_id: self.lut_id.clone(),
             effects_id: self.effects_id.clone(),
+            metadata_id: self.metadata_id.clone(),
             trim_start: trim_start.to_owned(),
             trim_end: trim_end.to_owned(),
             destination_id: self.destination_id.clone(),
@@ -177,17 +195,19 @@ pub struct RunChoice {
     pub preset_id: String,
     pub size_id: String,
     pub audio_id: String,
-    pub lut_id: String,
     pub effects_id: String,
+    pub metadata_id: String,
     pub trim_start: String,
     pub trim_end: String,
     pub destination_id: String,
     pub overwrite: Overwrite,
 }
 
-/// The folder the app keeps its own ffmpeg in (the one it downloads).
+/// The folder every yaiol app keeps its one ffmpeg and its effects catalogue in: shared by the apps and by their debug and release builds
+/// alike, and per user, so installing or replacing it needs no administrator rights. A subfolder per schema of the pair, so an app
+/// of another age never overwrites what this one reads.
 pub fn ffmpeg_dir() -> Option<PathBuf> {
-    path()?.parent().map(|d| d.join("ffmpeg"))
+    Some(dirs::data_local_dir()?.join("yaiol").join("Common Files").join("bin").join(engine::download::SCHEMA.to_string()))
 }
 
 fn path() -> Option<PathBuf> {
@@ -296,13 +316,17 @@ mod tests {
     }
 
     #[test]
-    fn a_vanished_lut_falls_back_to_none_and_a_pasted_path_is_cleaned() {
+    fn a_pasted_lut_path_in_an_effects_entry_is_cleaned_and_the_old_lut_fields_are_ignored() {
+        engine::effects::set_catalog_text(include_str!("../../engine/testdata/effects.json")).unwrap();
         let p = temp("lut");
-        fs::write(&p, r#"{ "lut_id": "gone", "luts": [ { "id": "a", "name": "A", "path": " \"D:\\hlg.cube\" " } ] }"#).unwrap();
+        fs::write(
+            &p,
+            r#"{ "lut_id": "gone", "luts": [ { "id": "x" } ],
+                 "effects": [ { "id": "a", "name": "A", "items": [ { "key": "try:lut3d", "values": { "file": " \"D:\\hlg.cube\" " } } ] } ] }"#,
+        )
+        .unwrap();
         let s = load_from(&p);
-        assert_eq!(s.lut_id, lut::NONE_ID);
-        assert!(s.lut_by(&s.lut_id).is_none());
-        assert_eq!(s.luts[0].path, "D:\\hlg.cube");
+        assert_eq!(s.effects_by("a").items[0].values["file"], "D:\\hlg.cube");
         let _ = fs::remove_file(p);
     }
 
@@ -319,6 +343,37 @@ mod tests {
         assert_eq!(s.theme, "dark");
         assert_eq!(s.effects.len(), 7);
         let _ = fs::remove_file(p);
+    }
+
+    #[test]
+    fn a_fresh_install_keeps_all_metadata_and_there_is_never_none() {
+        let s = Settings::default();
+        assert_eq!(s.metadata.len(), 1);
+        assert!(s.metadata_by(&s.metadata_id).removes_nothing());
+        assert_eq!(s.choice("", "").metadata_id, s.metadata_id);
+        // A file with no entries, or a selection that vanished, is repaired.
+        let p = temp("metadata");
+        fs::write(&p, r#"{ "metadata": [], "metadata_id": "gone" }"#).unwrap();
+        let s = load_from(&p);
+        assert_eq!(s.metadata.len(), 1);
+        assert_eq!(s.metadata_id, s.metadata[0].id);
+        fs::write(&p, r#"{ "metadata": [ { "id": "a", "name": "A" }, { "id": "b", "name": "B", "mode": "delete" } ], "metadata_id": "gone" }"#).unwrap();
+        let s = load_from(&p);
+        assert_eq!(s.metadata_id, "a");
+        assert_eq!(s.metadata_by("zzz").id, "a", "an unknown id gives the first entry");
+        let _ = fs::remove_file(p);
+    }
+
+    #[test]
+    fn a_picked_folder_becomes_a_saved_destination_once() {
+        let mut s = Settings::default();
+        let before = s.destinations.len();
+        let dir = Path::new("D:\\Out\\Reels");
+        let id = s.destination_for_folder(dir);
+        assert_eq!(s.destinations.len(), before + 1);
+        assert!(s.destination_by(&id).writes_to(dir));
+        assert_eq!(s.destination_for_folder(dir), id, "the same folder picked again is the same entry");
+        assert_eq!(s.destinations.len(), before + 1);
     }
 
     #[test]

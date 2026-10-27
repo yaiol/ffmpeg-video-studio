@@ -1,10 +1,12 @@
 //! Everything that touches the ffmpeg executable: finding it, asking it about a file, building the
-//! command line, and reading its progress. ffmpeg is a separate program, never linked, and is NOT
-//! shipped with the app: the user's own copy, or the one the app downloads into its own folder.
+//! command line, and reading its progress. ffmpeg is a separate program, never linked, NOT shipped
+//! with the app, and never the machine's own: the build yaiol approved, downloaded into the folder every
+//! yaiol app shares.
 
 use crate::{
     audio::{Audio, Resolved},
     effects::{self, Filter, Look},
+    metadata::{Meta, Outputs, SourceTags, StreamKind, StreamTags},
     preset::{Container, Preset, RateMode, Speed, VideoCodec},
 };
 use std::{
@@ -17,25 +19,12 @@ pub fn executable_name() -> &'static str {
     if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" }
 }
 
-/// First `name` found in a PATH-style variable.
-pub fn find_in_path(path_var: &std::ffi::OsStr, name: &str) -> Option<PathBuf> {
-    std::env::split_paths(path_var).map(|d| d.join(name)).find(|p| p.is_file())
-}
-
-/// The ffmpeg to use: the one beside the executable, then the copy the app downloaded into `own_dir`,
-/// then whatever is on PATH.
-pub fn locate(own_dir: Option<&Path>) -> Option<PathBuf> {
-    let name = executable_name();
-    if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
-        let beside = dir.join(name);
-        if beside.is_file() {
-            return Some(beside);
-        }
-    }
-    if let Some(own) = own_dir.map(|d| d.join(name)).filter(|p| p.is_file()) {
-        return Some(own);
-    }
-    std::env::var_os("PATH").and_then(|p| find_in_path(&p, name))
+/// The ffmpeg to use: the one the app installed into `dir`, and no other. PATH is never
+/// searched, and a program in `dir` that no install recorded (one put there by hand) is not a build we know.
+pub fn locate(dir: Option<&Path>) -> Option<PathBuf> {
+    let dir = dir?;
+    crate::download::installed_version(dir)?;
+    Some(dir.join(executable_name()))
 }
 
 /// A `Command` that does not flash a console window on Windows.
@@ -70,6 +59,8 @@ pub struct Probe {
     pub fps: Option<f32>,
     /// The first audio stream's codec; empty when none.
     pub audio_codec: String,
+    /// The names of the tags the file carries, on the file and on each stream.
+    pub tags: SourceTags,
 }
 
 fn parse_duration(s: &str) -> Option<u64> {
@@ -92,9 +83,93 @@ fn parse_size(part: &str) -> Option<(u32, u32)> {
     Some((w.parse().ok()?, h.parse().ok()?))
 }
 
+/// The names of the tags in the text `ffmpeg -i <file>` prints: under the file's own `Metadata:` (two spaces in) and under
+/// each stream's (four). The tags of a chapter are not the file's and are skipped. A stream is counted among those of
+/// its kind, in the file's order, which is how `-map 0:v:0` and `-metadata:s:a:1` address it.
+pub fn parse_tags(stderr: &str) -> SourceTags {
+    enum Scope {
+        Nowhere,
+        Container,
+        /// A stream (index into `streams`; None for a kind that has no tags we address) before or after its tags.
+        Stream(Option<usize>),
+        StreamTags(usize),
+        Chapters,
+        Chapter(usize),
+        ChapterTags(usize),
+    }
+    let mut tags = SourceTags::default();
+    let mut counts = [0usize; 3];
+    let mut scope = Scope::Nowhere;
+    for raw in stderr.lines() {
+        let indent = raw.len() - raw.trim_start().len();
+        let line = raw.trim();
+        // A tag line is `key : value`; a value that runs on has a line of its own that starts with the colon.
+        let key = || line.split(':').next().map(str::trim).filter(|k| !k.is_empty());
+        match indent {
+            2 => {
+                scope = if line == "Metadata:" {
+                    Scope::Container
+                } else if line == "Chapters:" {
+                    Scope::Chapters
+                } else if line.starts_with("Stream #") {
+                    let kind = if line.contains(" Video: ") {
+                        Some(StreamKind::Video)
+                    } else if line.contains(" Audio: ") {
+                        Some(StreamKind::Audio)
+                    } else if line.contains(" Subtitle: ") {
+                        Some(StreamKind::Subtitle)
+                    } else {
+                        None
+                    };
+                    Scope::Stream(kind.map(|kind| {
+                        let slot = &mut counts[kind as usize];
+                        tags.streams.push(StreamTags { kind, ordinal: *slot, keys: Vec::new() });
+                        *slot += 1;
+                        tags.streams.len() - 1
+                    }))
+                } else {
+                    Scope::Nowhere
+                };
+            }
+            4 => match scope {
+                Scope::Container => {
+                    if let Some(k) = key() {
+                        tags.container.push(k.to_owned());
+                    }
+                }
+                Scope::Stream(Some(i)) | Scope::StreamTags(i) if line == "Metadata:" => scope = Scope::StreamTags(i),
+                Scope::StreamTags(i) if line.ends_with(':') && !line.contains(" : ") => scope = Scope::Stream(Some(i)),
+                Scope::Chapters | Scope::Chapter(_) | Scope::ChapterTags(_) if line.starts_with("Chapter #") => {
+                    tags.chapters.push(Vec::new());
+                    scope = Scope::Chapter(tags.chapters.len() - 1);
+                }
+                _ => {}
+            },
+            6 => match scope {
+                Scope::StreamTags(i) => {
+                    if let Some(k) = key() {
+                        tags.streams[i].keys.push(k.to_owned());
+                    }
+                }
+                Scope::Chapter(i) | Scope::ChapterTags(i) if line == "Metadata:" => scope = Scope::ChapterTags(i),
+                _ => {}
+            },
+            8 => {
+                if let Scope::ChapterTags(i) = scope {
+                    if let Some(k) = key() {
+                        tags.chapters[i].push(k.to_owned());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    tags
+}
+
 /// Read the duration and the first video and audio streams out of the text `ffmpeg -i <file>` prints.
 pub fn parse_probe(stderr: &str) -> Probe {
-    let mut probe = Probe::default();
+    let mut probe = Probe { tags: parse_tags(stderr), ..Probe::default() };
     for line in stderr.lines() {
         let line = line.trim();
         if let Some(rest) = line.strip_prefix("Duration:") {
@@ -289,13 +364,13 @@ fn video_args(preset: &Preset, filter: &Filter, args: &mut Vec<OsString>) {
 
 /// The full argument list for one conversion. `normalized` is applied here, so a hand-edited
 /// settings file can never produce a combination the container refuses.
-pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, audio: Resolved) -> Vec<OsString> {
+pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, audio: Resolved, meta: &Meta) -> Vec<OsString> {
     let preset = preset.clone().normalized();
     // A copied stream can be neither recoloured, turned, rescaled nor overlaid.
     let copied = preset.video == VideoCodec::Copy;
-    let plan = if copied { effects::Plan { inputs: Vec::new(), filter: Filter::None } } else { effects::plan(look, input) };
+    let plan = if copied { effects::Plan::none() } else { effects::plan(look, input) };
     // Burned-in subtitles replace the subtitle track: the output carries no other.
-    let burned = !copied && look.effects.get(effects::Kind::Burn).is_some();
+    let burned = !copied && plan.burns;
     let mut args: Vec<OsString> = Vec::new();
     let mut push = |items: &[&str]| args.extend(items.iter().map(OsString::from));
     push(&["-hide_banner", "-nostdin", "-y", "-progress", "pipe:1", "-nostats"]);
@@ -337,12 +412,10 @@ pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, aud
     if preset.container == Container::Mkv && !burned {
         push(&["-map", "0:s?", "-c:s", "copy"]);
     }
-    // The file's tags and chapters are kept unless an effect leaves them out (which works on a copy too).
-    if look.effects.strips_metadata() {
-        push(&["-map_metadata", "-1", "-map_chapters", "-1"]);
-    } else {
-        push(&["-map_metadata", "0"]);
-    }
+    // The file's tags and chapters are carried over minus what the metadata setting removes (which is no filter, so
+    // it works on a copied video too).
+    let outputs = Outputs { audio: audio.mode != Audio::None, subtitles: preset.container == Container::Mkv && !burned };
+    args.extend(meta.cleanup.arguments(meta.source, outputs).into_iter().map(OsString::from));
 
     video_args(&preset, &plan.filter, &mut args);
 
@@ -370,7 +443,7 @@ pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, aud
         if audio.loudness {
             filters.push("loudnorm=I=-16:TP=-1.5:LRA=11".to_owned());
         }
-        filters.extend(look.effects.audio_filter().filter(|_| !copied).map(str::to_owned));
+        filters.extend(plan.audio.clone());
         if !filters.is_empty() {
             push(&["-af", &filters.join(",")]);
         }
@@ -385,7 +458,11 @@ pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, aud
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{effects::EffectsEntry, lut::Lut, size::Size};
+    use crate::{effects::{EffectsEntry, Item}, metadata::MetadataCleanup, size::Size};
+
+    fn entry(items: Vec<Item>) -> EffectsEntry {
+        EffectsEntry { items, ..EffectsEntry::new("t") }
+    }
 
     const SAMPLE: &str = "Input #0, matroska,webm, from 'a.mkv':
   Duration: 00:03:41.23, start: 0.000000, bitrate: 1234 kb/s
@@ -417,16 +494,13 @@ mod tests {
     }
 
     fn args_with(preset: &Preset, size: &Size, audio: Resolved) -> String {
-        args_with_lut(preset, size, audio, &Lut::none())
+        args_look(preset, size, audio, &EffectsEntry::none())
     }
 
-    fn args_with_lut(preset: &Preset, size: &Size, audio: Resolved, lut: &Lut) -> String {
-        args_look(preset, size, audio, lut, &EffectsEntry::none())
-    }
-
-    fn args_look(preset: &Preset, size: &Size, audio: Resolved, lut: &Lut, effects: &EffectsEntry) -> String {
-        let look = Look { size, lut, effects, duration_s: 100.0, trim: crate::trim::Trim::none() };
-        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, audio)
+    fn args_look(preset: &Preset, size: &Size, audio: Resolved, effects: &EffectsEntry) -> String {
+        let look = Look { size, effects, duration_s: 100.0, trim: crate::trim::Trim::none() };
+        let (cleanup, source) = (MetadataCleanup::keep(), SourceTags::default());
+        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, audio, &Meta { cleanup: &cleanup, source: &source })
             .iter()
             .map(|a| a.to_string_lossy().into_owned())
             .collect::<Vec<_>>()
@@ -483,16 +557,17 @@ mod tests {
     #[test]
     fn a_lut_comes_before_the_size_in_one_filter_chain() {
         let p = Preset::new("t");
-        let lut = Lut { path: "D:\\Luts\\hlg.cube".into(), ..Lut::new("hlg") };
+        let lut = entry(vec![Item::with("try:lut3d", &[("file", "D:\\Luts\\hlg.cube")])]);
         let size = Size { max_height: Some(720), ..Size::new("s") };
         let audio = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
-        let a = args_with_lut(&p, &size, audio, &lut);
-        let at = a.find("-vf lut3d=file='D\\:/Luts/hlg.cube',scale=").expect(&a);
-        assert!(at > 0, "{a}");
+        let a = args_look(&p, &size, audio, &lut);
+        let at = a.find("-vf lut3d=").expect(&a);
+        assert!(a[at..].contains("hlg.cube") && a[at..].contains(",scale="), "{a}");
         assert_eq!(a.matches("-vf").count(), 1, "{a}");
         // Alone, it is the whole chain; with no LUT and no size there is no filter at all.
-        assert!(args_with_lut(&p, &Size::original(), audio, &lut).contains("-vf lut3d=file='D\\:/Luts/hlg.cube' "));
-        assert!(!args_with_lut(&p, &Size::original(), audio, &Lut::none()).contains("-vf"));
+        let alone = args_look(&p, &Size::original(), audio, &lut);
+        assert!(alone.contains("-vf lut3d=") && !alone.contains("scale="), "{alone}");
+        assert!(!args_with(&p, &Size::original(), audio).contains("-vf"));
     }
 
     #[test]
@@ -586,58 +661,53 @@ mod tests {
 
     #[test]
     fn a_turn_is_a_plain_filter_and_a_copied_stream_takes_none() {
-        use crate::{effects::Effect, rotate::Rotation};
         let p = Preset::new("t");
         let audio = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
-        let turn = EffectsEntry { items: vec![Effect::Rotate { rotation: Rotation::Cw }], ..EffectsEntry::new("t") };
-        let a = args_look(&p, &Size::original(), audio, &Lut::none(), &turn);
-        assert!(a.contains("-vf transpose=1") && a.contains("-map 0:v:0") && !a.contains("filter_complex"), "{a}");
+        let turn = entry(vec![Item::with("turn", &[("way", "cw")])]);
+        let a = args_look(&p, &Size::original(), audio, &turn);
+        assert!(a.contains("-vf transpose=dir=clock") && a.contains("-map 0:v:0") && !a.contains("filter_complex"), "{a}");
         let mut copy = Preset::new("c");
         copy.video = VideoCodec::Copy;
-        assert!(!args_look(&copy, &Size::original(), audio, &Lut::none(), &turn).contains("transpose"));
+        assert!(!args_look(&copy, &Size::original(), audio, &turn).contains("transpose"));
     }
 
     #[test]
     fn a_watermark_adds_its_picture_as_a_second_input_and_maps_the_graph() {
-        use crate::effects::{Corner, Effect, Watermark};
         let p = Preset::new("t");
         let audio = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
-        let wm = EffectsEntry {
-            items: vec![Effect::Watermark(Watermark { path: "D:\\logo.png".into(), corner: Corner::BottomRight, ..Watermark::default() })],
-            ..EffectsEntry::new("t")
-        };
-        let a = args_look(&p, &Size::original(), audio, &Lut::none(), &wm);
+        let wm = entry(vec![Item::with("watermark", &[("file", "D:\\logo.png")])]);
+        let a = args_look(&p, &Size::original(), audio, &wm);
         assert!(a.contains("-i in.mkv -i D:\\logo.png "), "{a}");
         assert!(a.contains("-map [outv]") && !a.contains("-map 0:v:0"), "{a}");
-        assert!(a.contains("-filter_complex [0:v][1:v]overlay=x=main_w-overlay_w-20:y=main_h-overlay_h-20[outv]"), "{a}");
+        assert!(a.contains("-filter_complex ") && a.contains("overlay") && a.contains("[1:v]"), "{a}");
         // The picture is not an input of a copied stream.
         let mut copy = Preset::new("c");
         copy.video = VideoCodec::Copy;
-        assert!(!args_look(&copy, &Size::original(), audio, &Lut::none(), &wm).contains("logo.png"));
+        assert!(!args_look(&copy, &Size::original(), audio, &wm).contains("logo.png"));
     }
 
     #[test]
     fn playing_backwards_filters_the_sound_too_and_burning_drops_the_subtitle_track() {
-        use crate::effects::Effect;
         let mut p = Preset::new("t");
         p.container = Container::Mkv;
         let audio = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
-        let fx = |items| EffectsEntry { items, ..EffectsEntry::new("t") };
-        let plain = args_look(&p, &Size::original(), audio, &Lut::none(), &EffectsEntry::none());
+        let fx = |key: &str| entry(vec![Item::new(key)]);
+        let plain = args_look(&p, &Size::original(), audio, &EffectsEntry::none());
         assert!(plain.contains("-map 0:s? -c:s copy") && !plain.contains("-af"), "{plain}");
-        let reversed = args_look(&p, &Size::original(), audio, &Lut::none(), &fx(vec![Effect::Reverse]));
+        let reversed = args_look(&p, &Size::original(), audio, &fx("play-backwards"));
         assert!(reversed.contains("-vf reverse") && reversed.contains("-af areverse"), "{reversed}");
-        let burned = args_look(&p, &Size::original(), audio, &Lut::none(), &fx(vec![Effect::Burn]));
+        let burned = args_look(&p, &Size::original(), audio, &fx("burn-subtitles"));
         assert!(!burned.contains("-map 0:s?") && burned.contains("-vf subtitles=filename="), "{burned}");
         // With the sound copied or absent there is nothing to filter.
         let copy_sound = Resolved { mode: Audio::Copy, kbps: 0, channels: None, gain_db: 0, loudness: false };
-        assert!(!args_look(&p, &Size::original(), copy_sound, &Lut::none(), &fx(vec![Effect::Reverse])).contains("-af"));
+        assert!(!args_look(&p, &Size::original(), copy_sound, &fx("play-backwards")).contains("-af"));
     }
 
     fn args_trim(preset: &Preset, effects: &EffectsEntry, trim: crate::trim::Trim) -> Vec<String> {
         let size = Size::original();
-        let look = Look { size: &size, lut: &Lut::none(), effects, duration_s: 100.0, trim };
-        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false })
+        let look = Look { size: &size, effects, duration_s: 100.0, trim };
+        let (cleanup, source) = (MetadataCleanup::keep(), SourceTags::default());
+        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false }, &Meta { cleanup: &cleanup, source: &source })
             .iter()
             .map(|a| a.to_string_lossy().into_owned())
             .collect()
@@ -661,8 +731,8 @@ mod tests {
 
     #[test]
     fn a_cut_with_burned_subtitles_seeks_after_the_input() {
-        use crate::{effects::Effect, trim::Trim};
-        let burn = EffectsEntry { items: vec![Effect::Burn], ..EffectsEntry::new("t") };
+        use crate::trim::Trim;
+        let burn = entry(vec![Item::new("burn-subtitles")]);
         let a = args_trim(&Preset::new("t"), &burn, Trim::parse("10", "").unwrap());
         let (ss, input) = (a.iter().position(|x| x == "-ss").unwrap(), a.iter().position(|x| x == "-i").unwrap());
         assert!(input < ss, "{a:?}");
@@ -679,17 +749,77 @@ mod tests {
         assert!(!args_trim(&copy, &EffectsEntry::none(), Trim::none()).iter().any(|x| x == "-avoid_negative_ts"));
     }
 
-    #[test]
-    fn removing_the_metadata_works_on_a_copied_stream_too() {
-        use crate::effects::Effect;
-        let strip = EffectsEntry { items: vec![Effect::Strip], ..EffectsEntry::new("t") };
+    fn args_meta(preset: &Preset, cleanup: &MetadataCleanup, source: &SourceTags) -> String {
+        let (size, effects) = (Size::original(), EffectsEntry::none());
+        let look = Look { size: &size, effects: &effects, duration_s: 100.0, trim: crate::trim::Trim::none() };
         let audio = Resolved { mode: Audio::Copy, kbps: 0, channels: None, gain_db: 0, loudness: false };
+        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, audio, &Meta { cleanup, source })
+            .iter()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    #[test]
+    fn the_metadata_setting_reaches_the_command_line_and_works_on_a_copied_stream_too() {
+        use crate::metadata::Mode;
+        let source = SourceTags { container: vec!["title".into(), "location".into()], ..SourceTags::default() };
         let mut copy = Preset::new("c");
         copy.video = VideoCodec::Copy;
-        let a = args_look(&copy, &Size::original(), audio, &Lut::none(), &strip);
-        assert!(a.contains("-map_metadata -1 -map_chapters -1") && !a.contains("-map_metadata 0"), "{a}");
-        let a = args_look(&copy, &Size::original(), audio, &Lut::none(), &EffectsEntry::none());
-        assert!(a.contains("-map_metadata 0") && !a.contains("-map_chapters"), "{a}");
+        let keep = MetadataCleanup::keep();
+        let a = args_meta(&copy, &keep, &source);
+        assert!(a.contains("-map_metadata 0") && !a.contains("-map_chapters") && !a.contains("-metadata "), "{a}");
+        let all = MetadataCleanup { mode: Mode::Delete, ..MetadataCleanup::new("x") };
+        let a = args_meta(&copy, &all, &source);
+        assert!(a.contains("-map_metadata -1") && !a.contains("-map_metadata 0"), "{a}");
+        let some = MetadataCleanup { exceptions: vec!["location".into()], remove_chapters: true, ..MetadataCleanup::new("x") };
+        let a = args_meta(&copy, &some, &source);
+        assert!(a.contains("-map_metadata 0 -metadata location= ") && a.contains("-map_chapters -1") && !a.contains("title="), "{a}");
+    }
+
+    #[test]
+    fn the_tags_of_a_file_are_read_by_name_on_the_file_and_on_each_stream() {
+        // What `ffmpeg -i` printed for a phone-style MP4 (kept as it was, tag values included).
+        let text = "Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'src.mp4':
+  Metadata:
+    major_brand     : isom
+    compatible_brands: isomiso2mp41
+    creation_time   : 2026-08-01T10:00:00.000000Z
+    title           : My Holiday
+    comment         : shot on a Pixel
+                    : second line of the comment
+    location-eng    : +48.8566+002.3522/
+  Duration: 00:00:02.00, start: 0.000000, bitrate: 306 kb/s
+  Chapters:
+    Chapter #0:0: start 0.000000, end 1.000000
+      Metadata:
+        title           : Intro
+  Stream #0:0[0x1](eng): Video: mpeg4 (Simple Profile) (mp4v / 0x7634706D), yuv420p, 160x120, 25 fps
+    Metadata:
+      creation_time   : 2026-08-01T10:00:00.000000Z
+      handler_name    : VideoHandler Pixel
+  Stream #0:1[0x2](und): Audio: aac (LC), 44100 Hz, mono, fltp, 69 kb/s
+    Metadata:
+      handler_name    : SoundHandler
+      name            : Original track
+  Stream #0:2[0x3](und): Audio: aac (LC), 44100 Hz, mono, fltp, 69 kb/s
+    Metadata:
+      language        : fra
+  Stream #0:3[0x4](eng): Data: bin_data (text / 0x74786574), 0 kb/s
+    Metadata:
+      handler_name    : SubtitleHandler
+";
+        let tags = parse_tags(text);
+        assert_eq!(tags.container, ["major_brand", "compatible_brands", "creation_time", "title", "comment", "location-eng"]);
+        assert_eq!(tags.streams.len(), 3, "a data stream is not addressed: {:?}", tags.streams);
+        assert_eq!((tags.streams[0].kind, tags.streams[0].ordinal), (StreamKind::Video, 0));
+        assert_eq!(tags.streams[0].keys, ["creation_time", "handler_name"]);
+        assert_eq!((tags.streams[1].kind, tags.streams[1].ordinal), (StreamKind::Audio, 0));
+        assert_eq!(tags.streams[1].keys, ["handler_name", "name"]);
+        assert_eq!((tags.streams[2].kind, tags.streams[2].ordinal), (StreamKind::Audio, 1));
+        assert_eq!(tags.streams[2].keys, ["language"]);
+        assert_eq!(tags.chapters, vec![vec!["title".to_owned()]], "the chapter's own tags, not the file's");
+        assert_eq!(parse_probe(text).tags, tags);
     }
 
     #[test]
@@ -715,25 +845,24 @@ mod tests {
     fn a_copied_stream_takes_no_lut() {
         let mut p = Preset::new("t");
         p.video = VideoCodec::Copy;
-        let lut = Lut { path: "x.cube".into(), ..Lut::new("l") };
-        let a = args_with_lut(&p, &Size::original(), Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false }, &lut);
+        let lut = entry(vec![Item::with("try:lut3d", &[("file", "x.cube")])]);
+        let a = args_look(&p, &Size::original(), Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false }, &lut);
         assert!(!a.contains("lut3d"), "{a}");
     }
 
     #[test]
     fn the_level_and_the_loudness_become_audio_filters_before_the_reversal() {
-        use crate::effects::Effect;
         let p = Preset::new("t");
         let loud = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: -3, loudness: true };
         let a = args_with(&p, &Size::original(), loud);
         assert!(a.contains("-af volume=-3dB,loudnorm=I=-16:TP=-1.5:LRA=11"), "{a}");
-        let back = EffectsEntry { items: vec![Effect::Reverse], ..EffectsEntry::new("t") };
-        let a = args_look(&p, &Size::original(), loud, &Lut::none(), &back);
+        let back = entry(vec![Item::new("play-backwards")]);
+        let a = args_look(&p, &Size::original(), loud, &back);
         assert!(a.contains("-af volume=-3dB,loudnorm=I=-16:TP=-1.5:LRA=11,areverse"), "{a}");
         // The sound's own filters work with a copied VIDEO, the reversal does not.
         let mut copy = Preset::new("c");
         copy.video = VideoCodec::Copy;
-        let a = args_look(&copy, &Size::original(), loud, &Lut::none(), &back);
+        let a = args_look(&copy, &Size::original(), loud, &back);
         assert!(a.contains("-af volume=-3dB,loudnorm=I=-16:TP=-1.5:LRA=11 ") && !a.contains("areverse"), "{a}");
         let flat = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
         assert!(!args_with(&p, &Size::original(), flat).contains("-af"));

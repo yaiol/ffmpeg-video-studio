@@ -8,7 +8,7 @@ use crate::{
     audio::{self, AudioEntry},
     destination::{self, Overwrite, Resolved},
     ffmpeg,
-    lut::Lut,
+    metadata::{Meta, MetadataCleanup},
     preset::Preset,
     effects::{EffectsEntry, Look},
     size::Size,
@@ -39,10 +39,10 @@ pub struct JobSpec {
     pub size: Size,
     /// What happens to the sound, decided per file against the preset's container.
     pub audio: AudioEntry,
-    /// The colour LUT; `Lut::none()` applies none.
-    pub lut: Lut,
-    /// What else is done to the picture (a turn, a watermark, text); `EffectsEntry::none()` nothing.
+    /// What is done to the picture (a colour LUT, a turn, a watermark, text); `EffectsEntry::none()` nothing.
     pub effects: EffectsEntry,
+    /// Which of the file's tags and chapters are left out; `MetadataCleanup::keep()` none.
+    pub metadata: MetadataCleanup,
     /// The part of the file that is kept; `Trim::none()` all of it.
     pub trim: Trim,
 }
@@ -236,17 +236,13 @@ fn run_job(inner: &Inner, spec: &JobSpec, cancel: &AtomicBool, child_slot: &Mute
     }
 
     let preset = spec.preset.clone().normalized();
-    // The effects as they will be used (a path pasted with quotes is cleaned). The picture a watermark lays
-    // over the video must be there, or ffmpeg stops with a message about a filter graph.
+    // The effects as they will be used (a path pasted with quotes is cleaned). A file an effect names (a picture to lay over,
+    // a colour table) must be there, or ffmpeg stops with a message about a filter graph.
     let effects = spec.effects.clone().normalized();
     if preset.video != crate::preset::VideoCodec::Copy {
-        if let Some(w) = effects.watermark().filter(|w| !w.path.is_empty() && !w.file_exists()) {
-            return JobStatus::Failed { reason: format!("Watermark image not found: {}", w.path) };
+        if let Some(reason) = effects.missing_file() {
+            return JobStatus::Failed { reason };
         }
-    }
-    // A LUT that is chosen but not there would make ffmpeg stop with a message about a filter graph.
-    if !spec.lut.is_none() && preset.video != crate::preset::VideoCodec::Copy && !spec.lut.file_exists() {
-        return JobStatus::Failed { reason: format!("LUT file not found: {}", spec.lut.path) };
     }
     let output = match destination::resolve_output(
         spec.folder.as_deref(),
@@ -266,13 +262,19 @@ fn run_job(inner: &Inner, spec: &JobSpec, cancel: &AtomicBool, child_slot: &Mute
 
     // What is written is what the cut leaves, so that is what progress and the countdown are measured against.
     let kept_s = spec.trim.kept_s(probe.duration_us as f64 / 1_000_000.0);
-    let look = Look { size: &spec.size, lut: &spec.lut, effects: &effects, duration_s: kept_s, trim: spec.trim };
+    let look = Look { size: &spec.size, effects: &effects, duration_s: kept_s, trim: spec.trim };
+    if preset.video != crate::preset::VideoCodec::Copy {
+        if let Err(reason) = crate::effects::try_plan(&look, &spec.input) {
+            return JobStatus::Failed { reason };
+        }
+    }
     let mut sound = audio::resolve(&spec.audio, &preset, &probe.audio_codec);
     // A sound an effect has to process cannot be copied.
-    if preset.video != crate::preset::VideoCodec::Copy && effects.audio_filter().is_some() {
+    if preset.video != crate::preset::VideoCodec::Copy && effects.needs_audio_filter() {
         sound = audio::reencoded(sound, &preset, &probe.audio_codec);
     }
-    let args = ffmpeg::build_args(&spec.input, &output, &preset, &look, sound);
+    let meta = Meta { cleanup: &spec.metadata, source: &probe.tags };
+    let args = ffmpeg::build_args(&spec.input, &output, &preset, &look, sound, &meta);
     set_status(inner, spec.id, JobStatus::Running { percent: 0.0 });
     let mut child = match ffmpeg::command(&ffmpeg_path)
         .args(&args)
@@ -344,15 +346,16 @@ mod tests {
     use super::*;
     use crate::{
         audio::Audio,
-        effects::{BlurFit, Corner, Crop, Effect, FrameRate, TextOverlay, Watermark},
+        effects::Item,
         preset::{Container, VideoCodec},
-        rotate::Rotation,
     };
     use std::{fs, path::Path, time::Duration};
 
-    /// Tests that need a real ffmpeg run only when one is on PATH, and skip quietly otherwise.
+    /// Tests that need a real ffmpeg run only when one is on PATH, and skip quietly otherwise. (The app
+    /// itself never looks on PATH; a test machine's own ffmpeg is a convenience for the tests only.)
     fn ffmpeg_for_tests() -> Option<PathBuf> {
-        ffmpeg::locate(None)
+        let name = ffmpeg::executable_name();
+        std::env::split_paths(&std::env::var_os("PATH")?).map(|d| d.join(name)).find(|p| p.is_file())
     }
 
     /// A 2-second test clip made by ffmpeg itself.
@@ -406,7 +409,7 @@ mod tests {
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
         runner.start(
-            vec![JobSpec { id: 1, input: input.clone(), source_root: None, preset, folder: None, overwrite: Overwrite::Overwrite, size: Size::original(), audio: aac, lut: Lut::none(), effects: EffectsEntry::none(), trim: Trim::none() }],
+            vec![JobSpec { id: 1, input: input.clone(), source_root: None, preset, folder: None, overwrite: Overwrite::Overwrite, size: Size::original(), audio: aac, effects: EffectsEntry::none(), metadata: MetadataCleanup::keep(), trim: Trim::none() }],
             1,
         );
         let snap = wait(&runner);
@@ -432,7 +435,7 @@ mod tests {
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
         runner.start(
-            vec![JobSpec { id: 1, input, source_root: None, preset, folder: None, overwrite: Overwrite::Overwrite, size: Size::original(), audio: AudioEntry::original(), lut: Lut::none(), effects: EffectsEntry::none(), trim: Trim::none() }],
+            vec![JobSpec { id: 1, input, source_root: None, preset, folder: None, overwrite: Overwrite::Overwrite, size: Size::original(), audio: AudioEntry::original(), effects: EffectsEntry::none(), metadata: MetadataCleanup::keep(), trim: Trim::none() }],
             1,
         );
         let snap = wait(&runner);
@@ -462,9 +465,10 @@ mod tests {
             let help = ffmpeg::command(&ff).args(["-hide_banner", "-h", &format!("encoder={name}")]).output().unwrap();
             let help = String::from_utf8_lossy(&help.stdout).into_owned();
             let preset = Preset { video: codec, ..Preset::new("t") };
-            let (size, lut, effects) = (Size::original(), Lut::none(), EffectsEntry::none());
-            let look = Look { size: &size, lut: &lut, effects: &effects, duration_s: 1.0, trim: Trim::none() };
-            let args = ffmpeg::build_args(Path::new("in.mkv"), Path::new("out.mkv"), &preset, &look, crate::audio::Resolved { mode: Audio::None, kbps: 0, channels: None, gain_db: 0, loudness: false });
+            let (size, effects) = (Size::original(), EffectsEntry::none());
+            let look = Look { size: &size, effects: &effects, duration_s: 1.0, trim: Trim::none() };
+            let (cleanup, source) = (MetadataCleanup::keep(), crate::metadata::SourceTags::default());
+            let args = ffmpeg::build_args(Path::new("in.mkv"), Path::new("out.mkv"), &preset, &look, crate::audio::Resolved { mode: Audio::None, kbps: 0, channels: None, gain_db: 0, loudness: false }, &Meta { cleanup: &cleanup, source: &source });
             let args: Vec<String> = args.iter().map(|a| a.to_string_lossy().into_owned()).collect();
             let from = args.iter().position(|a| a == name).unwrap();
             // Every flag after the encoder's name up to the output, except generic ones the muxer owns.
@@ -499,8 +503,7 @@ mod tests {
             overwrite: Overwrite::Overwrite,
             size,
             audio: AudioEntry::original(),
-            lut: Lut::none(),
-            effects: EffectsEntry::none(),
+            effects: EffectsEntry::none(), metadata: MetadataCleanup::keep(),
             trim: Trim::none(),
         };
         let shrink = Size { max_height: Some(120), ..Size::new("small") };
@@ -540,15 +543,15 @@ mod tests {
             overwrite: Overwrite::Overwrite,
             size: Size::original(),
             audio: AudioEntry::original(),
-            lut: Lut { path: path.to_string_lossy().into_owned(), ..Lut::new("l") },
-            effects: EffectsEntry::none(),
+            effects: EffectsEntry { items: vec![Item::with("try:lut3d", &[("file", &path.to_string_lossy())])], ..EffectsEntry::new("l") },
+            metadata: MetadataCleanup::keep(),
             trim: Trim::none(),
         };
         runner.start(vec![spec(1, &cube), spec(2, &dir.join("gone.cube"))], 2);
         let snap = wait(&runner);
         assert!(matches!(snap[0].1, JobStatus::Done { .. }), "{snap:?}");
         let JobStatus::Failed { reason } = &snap[1].1 else { panic!("{snap:?}") };
-        assert!(reason.contains("LUT file not found"), "{reason}");
+        assert!(reason.contains("not found") && reason.contains("gone.cube"), "{reason}");
         let _ = fs::remove_dir_all(dir);
     }
 
@@ -565,13 +568,13 @@ mod tests {
             overwrite: Overwrite::Overwrite,
             size,
             audio: AudioEntry::original(),
-            lut: Lut::none(),
             effects,
+            metadata: MetadataCleanup::keep(),
             trim: Trim::none(),
         }
     }
 
-    fn entry_of(items: Vec<Effect>) -> EffectsEntry {
+    fn entry_of(items: Vec<Item>) -> EffectsEntry {
         EffectsEntry { items, ..EffectsEntry::new("e") }
     }
 
@@ -581,18 +584,20 @@ mod tests {
         let dir = scratch("turn");
         let input = dir.join("clip.avi"); // 320 x 240
         make_clip(&ff, &input);
-        let turn = |r: Rotation| entry_of(vec![Effect::Rotate { rotation: r }]);
+        let turn = |way: &str| entry_of(vec![Item::with("turn", &[("way", way)])]);
         // 320 x 240 turned is 240 x 320; a height limit of 160 then halves it to 120 x 160.
         let limit = Size { max_height: Some(160), ..Size::new("s") };
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
         runner.start(
             vec![
-                effects_spec(&input, &dir, 1, Size::original(), turn(Rotation::Cw)),
-                effects_spec(&input, &dir, 2, Size::original(), turn(Rotation::Half)),
-                effects_spec(&input, &dir, 3, limit, turn(Rotation::Ccw)),
+                effects_spec(&input, &dir, 1, Size::original(), turn("cw")),
+                effects_spec(&input, &dir, 2, Size::original(), turn("half")),
+                effects_spec(&input, &dir, 3, limit, turn("ccw")),
+                effects_spec(&input, &dir, 4, Size::original(), entry_of(vec![Item::with("turn", &[("way", "cw")]), Item::with("flip", &[("way", "v")])])),
+                effects_spec(&input, &dir, 5, Size::original(), entry_of(vec![Item::with("flip", &[("way", "h")])])),
             ],
-            3,
+            5,
         );
         let snap = wait(&runner);
         let dims = |i: usize| {
@@ -603,6 +608,19 @@ mod tests {
         assert_eq!(dims(0), (240, 320));
         assert_eq!(dims(1), (320, 240));
         assert_eq!(dims(2), (120, 160));
+        // A turn and a flip together: still a turned picture; a flip alone keeps the shape.
+        assert_eq!(dims(3), (240, 320));
+        assert_eq!(dims(4), (320, 240));
+        // The flip really mirrors: the left edge of the result is the right edge of the source.
+        let out = |i: usize| {
+            let JobStatus::Done { output } = &snap[i].1 else { panic!("{:?}", snap) };
+            output.clone()
+        };
+        let (source_right, source_left) = (square_colour(&ff, &input, 312, 100), square_colour(&ff, &input, 0, 100));
+        let apart = |a: (u32, u32, u32), b: (u32, u32, u32)| a.0.abs_diff(b.0) + a.1.abs_diff(b.1) + a.2.abs_diff(b.2);
+        if apart(source_right, source_left) > 60 {
+            assert!(apart(square_colour(&ff, &out(4), 0, 100), source_right) < apart(square_colour(&ff, &out(4), 0, 100), source_left), "the flip did not mirror");
+        }
         let _ = fs::remove_dir_all(dir);
     }
 
@@ -636,16 +654,14 @@ mod tests {
             .unwrap()
             .success();
         assert!(ok);
-        let mark = |path: &Path, corner: Corner| {
-            entry_of(vec![Effect::Watermark(Watermark { path: path.to_string_lossy().into_owned(), corner, ..Watermark::default() })])
-        };
+        let mark = |path: &Path, corner: &str| entry_of(vec![Item::with("watermark", &[("file", &path.to_string_lossy()), ("corner", corner), ("width", "64"), ("opacity", "1")])]);
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
         runner.start(
             vec![
-                effects_spec(&input, &dir, 1, Size::original(), mark(&logo, Corner::BottomRight)),
-                effects_spec(&input, &dir, 2, Size::original(), mark(&logo, Corner::TopLeft)),
-                effects_spec(&input, &dir, 3, Size::original(), mark(&dir.join("gone.png"), Corner::TopLeft)),
+                effects_spec(&input, &dir, 1, Size::original(), mark(&logo, "br")),
+                effects_spec(&input, &dir, 2, Size::original(), mark(&logo, "tl")),
+                effects_spec(&input, &dir, 3, Size::original(), mark(&dir.join("gone.png"), "tl")),
             ],
             3,
         );
@@ -661,7 +677,7 @@ mod tests {
         assert!(near(square_colour(&ff, &out(1), 30, 30)));
         assert_eq!(ffmpeg::probe(&ff, &out(0)).unwrap().width, 320);
         let JobStatus::Failed { reason } = &snap[2].1 else { panic!("{snap:?}") };
-        assert!(reason.contains("Watermark image not found"), "{reason}");
+        assert!(reason.contains("not found") && reason.contains("gone.png"), "{reason}");
         let _ = fs::remove_dir_all(dir);
     }
 
@@ -677,8 +693,8 @@ mod tests {
         make_clip(&ff, &input);
         let logo = dir.join("logo.png");
         assert!(ffmpeg::command(&ff).args(["-y", "-v", "error", "-f", "lavfi", "-i", "color=c=red:s=32x32", "-frames:v", "1"]).arg(&logo).status().unwrap().success());
-        let text = Effect::Text(TextOverlay { text: "{name} {elapsed} / {remaining}".into(), corner: Corner::BottomLeft, ..TextOverlay::default() });
-        let mark = Effect::Watermark(Watermark { path: logo.to_string_lossy().into_owned(), ..Watermark::default() });
+        let text = Item::with("text", &[("text", "{name} {elapsed} / {remaining}"), ("corner", "bl")]);
+        let mark = Item::with("watermark", &[("file", &logo.to_string_lossy())]);
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
         runner.start(
@@ -730,7 +746,7 @@ mod tests {
             .unwrap()
             .success();
         assert!(made);
-        let fit = entry_of(vec![Effect::BlurFit(BlurFit { height: 180, blur: 5 })]);
+        let fit = entry_of(vec![Item::with("blurfit", &[("height", "180"), ("blur", "5")])]);
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
         runner.start(vec![effects_spec(&input, &dir, 1, Size::original(), fit)], 1);
@@ -745,6 +761,37 @@ mod tests {
     }
 
     #[test]
+    fn a_horizontal_video_is_fitted_in_a_vertical_picture_on_its_blurred_copy() {
+        let Some(ff) = ffmpeg_for_tests() else { return };
+        let dir = scratch("blurfit-tall");
+        let input = dir.join("clip.avi"); // 320 x 240
+        make_clip(&ff, &input);
+        let fit = |shape: &str, height: &str| entry_of(vec![Item::with("blurfit", &[("shape", shape), ("height", height), ("blur", "5")])]);
+        let runner = Runner::new();
+        runner.set_ffmpeg(Some(ff.clone()));
+        runner.start(
+            vec![
+                effects_spec(&input, &dir, 1, Size::original(), fit("9:16", "320")),
+                effects_spec(&input, &dir, 2, Size::original(), fit("1:1", "240")),
+            ],
+            2,
+        );
+        let snap = wait(&runner);
+        let out = |i: usize| {
+            let JobStatus::Done { output } = &snap[i].1 else { panic!("{:?}", snap) };
+            output.clone()
+        };
+        // 9:16 at 320 high is 180 wide: the picture (180 x 135) sits in the middle, the blurred copy above and below it.
+        let p = ffmpeg::probe(&ff, &out(0)).unwrap();
+        assert_eq!((p.width, p.height), (180, 320));
+        let top = first_frame(&ff, &out(0), &[], Some("crop=180:8:0:0"));
+        assert!(top.iter().map(|b| u32::from(*b)).sum::<u32>() / top.len() as u32 > 30, "the top is black");
+        let p = ffmpeg::probe(&ff, &out(1)).unwrap();
+        assert_eq!((p.width, p.height), (240, 240));
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
     fn stereoscopic_puts_the_two_eyes_side_by_side() {
         let Some(ff) = ffmpeg_for_tests() else { return };
         let dir = scratch("stereo");
@@ -752,7 +799,7 @@ mod tests {
         make_clip(&ff, &input);
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
-        runner.start(vec![effects_spec(&input, &dir, 1, Size::original(), entry_of(vec![Effect::Stereo]))], 1);
+        runner.start(vec![effects_spec(&input, &dir, 1, Size::original(), entry_of(vec![Item::with("try:stereo3d", &[("in", "al"), ("out", "sbsl")])]))], 1);
         let snap = wait(&runner);
         let JobStatus::Done { output } = &snap[0].1 else { panic!("{:?}", snap) };
         let p = ffmpeg::probe(&ff, output).unwrap();
@@ -766,7 +813,7 @@ mod tests {
         let dir = scratch("reverse");
         let input = dir.join("clip.avi");
         make_clip(&ff, &input);
-        let back = entry_of(vec![Effect::Reverse]);
+        let back = entry_of(vec![Item::new("play-backwards")]);
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
         // A ProRes MOV, and an H.264 / AV1 MP4 whose sound would have been copied (the source's AAC fits).
@@ -819,7 +866,7 @@ mod tests {
         runner.set_ffmpeg(Some(ff.clone()));
         runner.start(
             vec![
-                effects_spec(&input, &dir, 1, Size::original(), entry_of(vec![Effect::Burn])),
+                effects_spec(&input, &dir, 1, Size::original(), entry_of(vec![Item::new("burn-subtitles")])),
                 effects_spec(&input, &dir, 2, Size::original(), EffectsEntry::none()),
             ],
             2,
@@ -838,7 +885,7 @@ mod tests {
     }
 
     #[test]
-    fn crop_frame_rate_deinterlace_and_stripped_metadata_work_on_a_real_clip() {
+    fn crop_frame_rate_deinterlace_and_removed_metadata_work_on_a_real_clip() {
         let Some(ff) = ffmpeg_for_tests() else { return };
         let dir = scratch("basics");
         let input = dir.join("clip.avi"); // 320 x 240, 25 fps
@@ -846,10 +893,10 @@ mod tests {
         let tagged = dir.join("tagged.avi");
         assert!(ffmpeg::command(&ff).args(["-y", "-v", "error", "-i"]).arg(&input).args(["-c", "copy", "-metadata", "title=SecretTitle"]).arg(&tagged).status().unwrap().success());
         let jobs = vec![
-            effects_spec(&input, &dir, 1, Size::original(), entry_of(vec![Effect::Crop(Crop { left: 20, right: 20, top: 11, bottom: 11 })])),
-            effects_spec(&input, &dir, 2, Size::original(), entry_of(vec![Effect::Fps(FrameRate { value: "15".into() })])),
-            effects_spec(&input, &dir, 3, Size::original(), entry_of(vec![Effect::Deinterlace])),
-            effects_spec(&tagged, &dir, 4, Size::original(), entry_of(vec![Effect::Strip])),
+            effects_spec(&input, &dir, 1, Size::original(), entry_of(vec![Item::with("crop-edges", &[("left", "20"), ("right", "20"), ("top", "11"), ("bottom", "11")])])),
+            effects_spec(&input, &dir, 2, Size::original(), entry_of(vec![Item::with("try:fps", &[("fps", "15")])])),
+            effects_spec(&input, &dir, 3, Size::original(), entry_of(vec![Item::new("try:yadif")])),
+            JobSpec { metadata: MetadataCleanup { mode: crate::metadata::Mode::Delete, ..MetadataCleanup::new("x") }, ..effects_spec(&tagged, &dir, 4, Size::original(), EffectsEntry::none()) },
             effects_spec(&tagged, &dir, 5, Size::original(), EffectsEntry::none()),
         ];
         let runner = Runner::new();
@@ -865,8 +912,8 @@ mod tests {
         assert_eq!((p.width, p.height), (280, 218));
         assert_eq!(ffmpeg::probe(&ff, &out(1)).unwrap().fps.map(|f| f.round() as u32), Some(15));
         assert_eq!(ffmpeg::probe(&ff, &out(2)).unwrap().width, 320);
-        // The title the source carries survives an ordinary conversion and not one that leaves the metadata out.
-        assert!(info_text(&ff, &out(4)).contains("SecretTitle"), "the title was lost without the effect");
+        // The title the source carries survives an ordinary conversion and not one that removes all the metadata.
+        assert!(info_text(&ff, &out(4)).contains("SecretTitle"), "the title was lost without the setting");
         assert!(!info_text(&ff, &out(3)).contains("SecretTitle"), "the title is still there");
         let _ = fs::remove_dir_all(dir);
     }
@@ -1058,8 +1105,7 @@ mod tests {
                 overwrite: Overwrite::Overwrite,
                 size: Size::original(),
                 audio: ac3,
-                lut: Lut::none(),
-                effects: EffectsEntry::none(),
+                effects: EffectsEntry::none(), metadata: MetadataCleanup::keep(),
                 trim: Trim::none(),
             }],
             1,
@@ -1085,7 +1131,7 @@ mod tests {
         let runner = Runner::new();
         runner.set_ffmpeg(Some(ff.clone()));
         runner.start(
-            vec![JobSpec { id: 1, input, source_root: None, preset, folder: None, overwrite: Overwrite::Skip, size: Size::original(), audio: AudioEntry::original(), lut: Lut::none(), effects: EffectsEntry::none(), trim: Trim::none() }],
+            vec![JobSpec { id: 1, input, source_root: None, preset, folder: None, overwrite: Overwrite::Skip, size: Size::original(), audio: AudioEntry::original(), effects: EffectsEntry::none(), metadata: MetadataCleanup::keep(), trim: Trim::none() }],
             1,
         );
         let snap = wait(&runner);
@@ -1116,8 +1162,7 @@ mod tests {
             overwrite: Overwrite::Skip,
             size: Size::original(),
             audio: AudioEntry::original(),
-            lut: Lut::none(),
-            effects: EffectsEntry::none(),
+            effects: EffectsEntry::none(), metadata: MetadataCleanup::keep(),
             trim: Trim::none(),
         };
         runner.start(vec![spec(1, input), spec(2, bad)], 2);
@@ -1140,12 +1185,83 @@ mod tests {
             overwrite: Overwrite::Skip,
             size: Size::original(),
             audio: AudioEntry::original(),
-            lut: Lut::none(),
-            effects: EffectsEntry::none(),
+            effects: EffectsEntry::none(), metadata: MetadataCleanup::keep(),
             trim: Trim::none(),
         };
         runner.start(vec![spec], 1);
         let snap = wait(&runner);
         assert!(matches!(snap[0].1, JobStatus::Failed { .. }), "{snap:?}");
+    }
+
+    #[test]
+    fn the_metadata_setting_removes_what_it_names_on_the_file_and_the_tracks_and_the_chapters_on_request() {
+        use crate::metadata::Mode;
+        let Some(ff) = ffmpeg_for_tests() else { return };
+        let dir = scratch("metadata");
+        // A source with tags on the file and on its tracks, and two chapters.
+        let chapters = dir.join("chapters.txt");
+        fs::write(&chapters, ";FFMETADATA1\ntitle=SecretTitle\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=1000\ntitle=SecretChapter\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=1000\nEND=2000\ntitle=Second\n").unwrap();
+        let input = dir.join("src.mp4");
+        assert!(ffmpeg::command(&ff)
+            .args(["-y", "-v", "error", "-f", "lavfi", "-i", "testsrc=size=160x120:rate=25:duration=2", "-f", "lavfi", "-i", "sine=frequency=440:duration=2", "-i"])
+            .arg(&chapters)
+            .args(["-map", "0:v", "-map", "1:a", "-map_metadata", "2", "-map_chapters", "2"])
+            .args(["-metadata", "comment=SecretComment", "-metadata", "creation_time=2026-08-01T10:00:00Z", "-metadata", "location=+48.8566+002.3522/"])
+            .args(["-metadata:s:v:0", "handler_name=SecretDevice", "-metadata:s:a:0", "language=fra", "-c:v", "mpeg4", "-c:a", "aac"])
+            .arg(&input)
+            .status()
+            .unwrap()
+            .success());
+        assert!(info_text(&ff, &input).contains("SecretComment"), "the source has no tags to remove");
+        let job = |id: u64, cleanup: MetadataCleanup| JobSpec { metadata: cleanup, ..effects_spec(&input, &dir, id, Size::original(), EffectsEntry::none()) };
+        let names = |m: Mode, list: &[&str], chapters: bool| MetadataCleanup {
+            mode: m,
+            exceptions: list.iter().map(|s| (*s).to_owned()).collect(),
+            remove_chapters: chapters,
+            ..MetadataCleanup::new("x")
+        };
+        let runner = Runner::new();
+        runner.set_ffmpeg(Some(ff.clone()));
+        runner.start(
+            vec![
+                job(1, MetadataCleanup::keep()),
+                job(2, names(Mode::Keep, &["location*", "creation_time", "comment", "handler_name"], false)),
+                job(3, names(Mode::Delete, &["title", "language"], true)),
+                job(4, names(Mode::Delete, &[], false)),
+                job(5, names(Mode::Delete, &["language"], false)),
+            ],
+            5,
+        );
+        let snap = wait(&runner);
+        let text = |i: usize| {
+            let JobStatus::Done { output } = &snap[i].1 else { panic!("{snap:?}") };
+            info_text(&ff, output)
+        };
+        // Nothing removed: everything the source carried is still there.
+        let all = text(0);
+        for kept in ["SecretComment", "+48.8566", "SecretDevice", "SecretChapter"] {
+            assert!(all.contains(kept), "{kept} was lost with nothing removed:\n{all}");
+        }
+        // Keep all, except the named: those are gone on the file and on the tracks; the title and the chapter names stay.
+        let named = text(1);
+        for gone in ["SecretComment", "+48.8566", "SecretDevice", "2026-08-01"] {
+            assert!(!named.contains(gone), "{gone} is still there:\n{named}");
+        }
+        assert!(named.contains("SecretTitle") && named.contains("SecretChapter"), "{named}");
+        // Remove all, except the title and the language, and the chapters too.
+        let few = text(2);
+        assert!(few.contains("SecretTitle"), "{few}");
+        for gone in ["SecretComment", "+48.8566", "SecretDevice", "SecretChapter", "Chapter #"] {
+            assert!(!few.contains(gone), "{gone} is still there:\n{few}");
+        }
+        assert!(few.contains("fra"), "the language was listed: {few}");
+        // Remove all: the title is gone, and so are the chapters' names; the chapters themselves stay (a switch of their own).
+        let none = text(3);
+        assert!(!none.contains("SecretTitle") && !none.contains("SecretComment") && !none.contains("SecretDevice"), "{none}");
+        assert!(!none.contains("SecretChapter") && none.contains("Chapter #0:0"), "{none}");
+        // A list without the title takes the title of the file AND of the chapters, but not the chapters.
+        let lang = text(4);
+        assert!(!lang.contains("SecretTitle") && !lang.contains("SecretChapter") && lang.contains("Chapter #0:1") && lang.contains("fra"), "{lang}");
+        let _ = fs::remove_dir_all(dir);
     }
 }
