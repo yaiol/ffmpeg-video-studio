@@ -194,7 +194,11 @@ impl Download {
             let set = |s: DownloadState| *state.lock().unwrap() = s;
             match run(&dir, &set) {
                 Ok(path) => set(DownloadState::Done(path)),
-                Err(e) => set(DownloadState::Failed(e)),
+                Err(e) => {
+                    crate::log::error("ffmpeg install", &format!("{e}
+folder: {}", dir.display()));
+                    set(DownloadState::Failed(e));
+                }
             }
         });
     }
@@ -243,7 +247,10 @@ impl Latest {
         std::thread::spawn(move || {
             let answer = match fetch_manifest() {
                 Ok(m) => LatestState::Known(m),
-                Err(e) => LatestState::Failed(e),
+                Err(e) => {
+                    crate::log::error("ffmpeg manifest", &e);
+                    LatestState::Failed(e)
+                }
             };
             *state.lock().unwrap() = answer;
         });

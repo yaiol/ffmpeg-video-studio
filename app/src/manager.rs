@@ -4,7 +4,7 @@
 //! ⚠ CLAUDE: NO HARDCODED UI STRINGS. Container and codec names are proper nouns and stay literal;
 //! everything else goes through the t() lookup with a literal key at the call site.
 
-use crate::{catalog::NumberInput, i18n, settings::Settings};
+use crate::{catalog::UisNum, i18n, settings::Settings};
 use dioxus::{html::input_data::MouseButton, prelude::*};
 use dioxus_free_icons::{
     Icon,
@@ -14,7 +14,7 @@ use engine::{
     AudioEntry, Destination, MetadataCleanup, Preset, Size,
     audio::Audio,
     metadata::Mode,
-    preset::{Container, ProResProfile, RateMode, Speed, Tune, VideoCodec},
+    preset::{Container, PresetEncoder, ProResProfile, RateMode, Speed, Tune, VideoCodec},
 };
 
 /// The keys of the Settings tabs this module provides.
@@ -23,6 +23,8 @@ pub const SIZES: &str = "sizes";
 pub const AUDIO: &str = "audio";
 pub const DESTINATIONS: &str = "destinations";
 pub const EFFECTS: &str = "effects";
+pub const AUDIO_EFFECTS: &str = "audio-effects";
+pub const FFMPEG: &str = "ffmpeg";
 pub const METADATA: &str = "metadata";
 pub const NOTIFICATIONS: &str = "notifications";
 
@@ -140,7 +142,7 @@ fn number_width(max: u32) -> u32 {
 
 /// A labelled catalog number field, as wide as its largest value needs.
 #[component]
-fn NumberField(
+fn LclFldNum(
     label: String,
     value: u32,
     min: u32,
@@ -151,10 +153,10 @@ fn NumberField(
     on_change: EventHandler<u32>,
 ) -> Element {
     rsx! {
-        div { class: "dlg-field",
-            label { class: "dlg-field-label", "{label}" }
+        div { class: "uis-fld-labelled",
+            label { class: "uis-fld-labelled-label", "{label}" }
             div { class: "manager-row",
-                NumberInput {
+                UisNum {
                     value: Some(f64::from(value)),
                     min: Some(f64::from(min)),
                     max: Some(f64::from(max)),
@@ -168,24 +170,6 @@ fn NumberField(
                 }
                 if !unit.is_empty() {
                     span { "{unit}" }
-                }
-            }
-        }
-    }
-}
-
-/// A choice from a short list.
-#[component]
-fn ChoiceField(label: String, value: String, options: Vec<(String, String)>, on_change: EventHandler<String>) -> Element {
-    rsx! {
-        div { class: "dlg-field",
-            label { class: "dlg-field-label", "{label}" }
-            select {
-                class: "select",
-                value: "{value}",
-                onchange: move |e| on_change.call(e.value()),
-                for (id, text) in options {
-                    option { key: "{id}", value: "{id}", selected: id == value, "{text}" }
                 }
             }
         }
@@ -230,7 +214,14 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
     let container_options: Vec<(String, String)> =
         Container::ALL.iter().map(|c| (container_id(*c).to_owned(), container_label(*c).to_owned())).collect();
     let codec_options: Vec<(String, String)> =
-        current.container.video_codecs().iter().map(|c| (codec_id(*c).to_owned(), codec_label(*c))).collect();
+        current.container.video_codecs().iter().filter(|c| c.graphics_maker().is_none()).map(|c| (codec_id(*c).to_owned(), codec_label(*c))).collect();
+    // Only H.264 and H.265 have a graphics-card version: the other codecs have no engine to choose.
+    let has_engine_choice = matches!(current.video, VideoCodec::H264 | VideoCodec::H265);
+    let encoder_options = [
+        ("default".to_owned(), t("lblPrsEncoderDefault")),
+        ("software".to_owned(), t("lblPrsEncoderSoftware")),
+    ];
+    let encoder_now = if current.encoder == PresetEncoder::Software { "software" } else { "default" };
     // Only the speeds the codec has: x264 and x265 add `ultrafast`.
     let speed_options: Vec<(String, String)> = current
         .video
@@ -250,7 +241,6 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
     let profile_options: Vec<(String, String)> =
         ProResProfile::ALL.iter().map(|p| (profile_id(*p).to_owned(), profile_label(*p).to_owned())).collect();
     let needs_x26x = matches!(current.video, VideoCodec::H264 | VideoCodec::H265);
-    let is_amd = current.video.is_amd();
     let rate_choice = current.video.has_rate_choice();
     let by_bitrate = rate_choice && current.rate == RateMode::Bitrate;
     let ten_bit_choice = current.video.supports_ten_bit();
@@ -261,6 +251,7 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
     let id_for_name = cur_id.clone();
     let id_for_container = cur_id.clone();
     let id_for_codec = cur_id.clone();
+    let id_for_encoder = cur_id.clone();
     let id_for_crf = cur_id.clone();
     let id_for_speed = cur_id.clone();
     let id_for_profile = cur_id.clone();
@@ -274,10 +265,10 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
 
     rsx! {
         div { class: "manager",
-            div { class: "manager-list",
+            div { class: "manager-list uis-lvw-reorder",
                 div { class: "manager-actions",
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_new}",
                         "aria-label": "{s_new}",
                         onclick: move |_| {
@@ -288,7 +279,7 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdPlus }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_dup}",
                         "aria-label": "{s_dup}",
                         onclick: move |_| {
@@ -303,7 +294,7 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdCopy }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_del}",
                         "aria-label": "{s_del}",
                         disabled: !can_delete,
@@ -316,7 +307,7 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdTrash2 }
                     }
                 }
-                div { class: "lv-scroll",
+                div { class: "uis-lvw-scroll",
                     for p in presets.iter() {
                         {
                             let id = p.id.clone();
@@ -328,9 +319,9 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
                                 button {
                                     key: "{p.id}",
                                     class: match (active, moving) {
-                                        (_, true) => "lv-item reordering",
-                                        (true, _) => "lv-item active",
-                                        _ => "lv-item",
+                                        (_, true) => "uis-lvw-item reordering",
+                                        (true, _) => "uis-lvw-item active",
+                                        _ => "uis-lvw-item",
                                     },
                                     onpointerdown: move |e| {
                                         if e.trigger_button() == Some(MouseButton::Primary) {
@@ -350,22 +341,22 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
                                         selected.set(id.clone());
                                         settings.write().preset_id = id.clone();
                                     },
-                                    div { class: "lv-item-body",
-                                        div { class: "lv-item-name", "{p.name}" }
+                                    div { class: "uis-lvw-item-body",
+                                        div { class: "uis-lvw-item-name", "{p.name}" }
                                     }
-                                    span { class: "lv-item-badge", "{container_label(p.container)}" }
+                                    span { class: "uis-lvw-item-badge", "{container_label(p.container)}" }
                                 }
                             }
                         }
                     }
                 }
-                p { class: "hint", "{s_reorder}" }
+                p { class: "uis-hnt", "{s_reorder}" }
             }
             div { class: "manager-form",
-                div { class: "dlg-field",
-                    label { class: "dlg-field-label", {t("lblPrsName")} }
+                div { class: "uis-fld-labelled",
+                    label { class: "uis-fld-labelled-label", {t("lblPrsName")} }
                     input {
-                        class: "input",
+                        class: "uis-txt",
                         value: "{current.name}",
                         oninput: move |e| {
                             let v = e.value();
@@ -373,74 +364,112 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
                         },
                     }
                 }
-                ChoiceField {
-                    label: t("lblPrsContainer"),
-                    value: container_id(current.container).to_owned(),
-                    options: container_options,
-                    on_change: move |v: String| {
-                        if let Some(c) = Container::ALL.iter().copied().find(|c| container_id(*c) == v) {
-                            edit_preset(settings, &id_for_container, |p| p.container = c);
-                        }
-                    },
-                }
-                ChoiceField {
-                    label: t("lblPrsVideo"),
-                    value: codec_id(current.video).to_owned(),
-                    options: codec_options,
-                    on_change: move |v: String| {
-                        if let Some(c) = VideoCodec::ALL.iter().copied().find(|c| codec_id(*c) == v) {
-                            edit_preset(settings, &id_for_codec, |p| {
-                                p.video = c;
-                                // A new codec starts from its own sensible quality, not the old one's number.
-                                p.crf = c.crf_range().2;
-                            });
-                        }
-                    },
-                }
-                if needs_x26x {
-                    p { class: "hint", {t("msgPrsEncoderHint")} }
-                }
-                if is_prores {
-                    ChoiceField {
-                        label: t("lblPrsProResProfile"),
-                        value: profile_id(current.prores).to_owned(),
-                        options: profile_options,
-                        on_change: move |v: String| {
-                            if let Some(pr) = ProResProfile::ALL.iter().copied().find(|p| profile_id(*p) == v) {
-                                edit_preset(settings, &id_for_profile, |p| p.prores = pr);
-                            }
+                div { class: "uis-fld-labelled",
+                    label { class: "uis-fld-labelled-label", {t("lblPrsContainer")} }
+                    select {
+                        class: "uis-ddn-std",
+                        value: container_id(current.container).to_owned(),
+                        onchange: {
+                            let cb = move |v: String| {
+                                if let Some(c) = Container::ALL.iter().copied().find(|c| container_id(*c) == v) {
+                                    edit_preset(settings, &id_for_container, |p| p.container = c);
+                                }
+                            };
+                            move |e| cb(e.value())
                         },
+                        for (oid, text) in container_options {
+                            option { key: "{oid}", value: "{oid}", selected: oid == container_id(current.container).to_owned(), "{text}" }
+                        }
                     }
                 }
-                if let Some(maker) = current.video.graphics_maker() {
-                    p {
-                        class: "hint",
-                        {match maker {
-                            "amd" => t("msgPrsAmdHint"),
-                            "nvidia" => t("msgPrsNvidiaHint"),
-                            _ => t("msgPrsIntelHint"),
-                        }}
+                div { class: "uis-fld-labelled",
+                    label { class: "uis-fld-labelled-label", {t("lblPrsVideo")} }
+                    select {
+                        class: "uis-ddn-std",
+                        value: codec_id(current.video).to_owned(),
+                        onchange: {
+                            let cb = move |v: String| {
+                                if let Some(c) = VideoCodec::ALL.iter().copied().find(|c| codec_id(*c) == v) {
+                                    edit_preset(settings, &id_for_codec, |p| {
+                                        p.video = c;
+                                        // A new codec starts from its own sensible quality, not the old one's number.
+                                        p.crf = c.crf_range().2;
+                                    });
+                                }
+                            };
+                            move |e| cb(e.value())
+                        },
+                        for (oid, text) in codec_options {
+                            option { key: "{oid}", value: "{oid}", selected: oid == codec_id(current.video).to_owned(), "{text}" }
+                        }
+                    }
+                }
+                if has_engine_choice {
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsEncoder")} }
+                        select {
+                            class: "uis-ddn-std",
+                            value: encoder_now.to_owned(),
+                            onchange: move |e| {
+                                let chosen = if e.value() == "software" { PresetEncoder::Software } else { PresetEncoder::Default };
+                                edit_preset(settings, &id_for_encoder, |p| p.encoder = chosen);
+                            },
+                            for (oid, text) in encoder_options {
+                                option { key: "{oid}", value: "{oid}", selected: oid == encoder_now, "{text}" }
+                            }
+                        }
+                    }
+                }
+                if needs_x26x {
+                    p { class: "uis-hnt", {t("msgPrsEncoderHint")} }
+                }
+                if is_prores {
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsProResProfile")} }
+                        select {
+                            class: "uis-ddn-std",
+                            value: profile_id(current.prores).to_owned(),
+                            onchange: {
+                                let cb = move |v: String| {
+                                    if let Some(pr) = ProResProfile::ALL.iter().copied().find(|p| profile_id(*p) == v) {
+                                        edit_preset(settings, &id_for_profile, |p| p.prores = pr);
+                                    }
+                                };
+                                move |e| cb(e.value())
+                            },
+                            for (oid, text) in profile_options {
+                                option { key: "{oid}", value: "{oid}", selected: oid == profile_id(current.prores).to_owned(), "{text}" }
+                            }
+                        }
                     }
                 }
                 if is_raw {
-                    p { class: "hint", {t("msgPrsRawHint")} }
+                    p { class: "uis-hnt", {t("msgPrsRawHint")} }
                 }
                 if rate_choice {
-                    ChoiceField {
-                        label: t("lblPrsRateMode"),
-                        value: (if by_bitrate { "bitrate" } else { "crf" }).to_owned(),
-                        options: vec![
-                            ("crf".to_owned(), t("lblPrsRateCrf")),
-                            ("bitrate".to_owned(), t("lblPrsRateBitrate")),
-                        ],
-                        on_change: move |v: String| {
-                            let mode = if v == "bitrate" { RateMode::Bitrate } else { RateMode::Crf };
-                            edit_preset(settings, &id_for_rate, |p| p.rate = mode);
-                        },
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsRateMode")} }
+                        select {
+                            class: "uis-ddn-std",
+                            value: (if by_bitrate { "bitrate" } else { "crf" }).to_owned(),
+                            onchange: {
+                                let cb = move |v: String| {
+                                    let mode = if v == "bitrate" { RateMode::Bitrate } else { RateMode::Crf };
+                                    edit_preset(settings, &id_for_rate, |p| p.rate = mode);
+                                };
+                                move |e| cb(e.value())
+                            },
+                            for (oid, text) in vec![
+                                ("crf".to_owned(), t("lblPrsRateCrf")),
+                                ("bitrate".to_owned(), t("lblPrsRateBitrate")),
+                            ] {
+                                option { key: "{oid}", value: "{oid}", selected: oid == (if by_bitrate { "bitrate" } else { "crf" }).to_owned(), "{text}" }
+                            }
+                        }
                     }
                 }
                 if by_bitrate {
-                    NumberField {
+                    LclFldNum {
                         label: t("lblPrsBitrate"),
                         value: current.bitrate_kbps,
                         min: 50,
@@ -451,73 +480,97 @@ pub fn PresetEditor(settings: Signal<Settings>) -> Element {
                 } else if has_crf {
                     // The key makes the field remount when the codec changes, so it never shows a value
                     // from the old codec's scale.
-                    NumberField {
+                    LclFldNum {
                         key: "{codec_id(current.video)}",
-                        label: if is_amd { t("lblPrsQualityQp") } else { t("lblPrsQuality") },
+                        label: t("lblPrsQuality"),
                         value: current.crf,
                         min: crf_lo,
                         max: crf_hi,
                         on_change: move |v: u32| edit_preset(settings, &id_for_crf, |p| p.crf = v),
                     }
-                    p { class: "hint", {t("msgPrsQualityHint")} }
+                    p { class: "uis-hnt", {t("msgPrsQualityHint")} }
                 }
                 if ten_bit_choice {
-                    ChoiceField {
-                        label: t("lblPrsBitDepth"),
-                        value: (if current.ten_bit { "10" } else { "8" }).to_owned(),
-                        options: vec![("8".to_owned(), "8-bit".to_owned()), ("10".to_owned(), "10-bit".to_owned())],
-                        on_change: move |v: String| {
-                            let ten = v == "10";
-                            edit_preset(settings, &id_for_depth, |p| p.ten_bit = ten);
-                        },
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsBitDepth")} }
+                        select {
+                            class: "uis-ddn-std",
+                            value: (if current.ten_bit { "10" } else { "8" }).to_owned(),
+                            onchange: {
+                                let cb = move |v: String| {
+                                    let ten = v == "10";
+                                    edit_preset(settings, &id_for_depth, |p| p.ten_bit = ten);
+                                };
+                                move |e| cb(e.value())
+                            },
+                            for (oid, text) in vec![("8".to_owned(), "8-bit".to_owned()), ("10".to_owned(), "10-bit".to_owned())] {
+                                option { key: "{oid}", value: "{oid}", selected: oid == (if current.ten_bit { "10" } else { "8" }).to_owned(), "{text}" }
+                            }
+                        }
                     }
                 }
                 if is_h265 {
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblPrsX265Params")} }
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsX265Params")} }
                         input {
-                            class: "input",
+                            class: "uis-txt",
                             value: "{current.x265_params}",
                             oninput: move |e| {
                                 let v = e.value();
                                 edit_preset(settings, &id_for_x265, |p| p.x265_params = v);
                             },
                         }
-                        p { class: "hint", {t("msgPrsX265Hint")} }
+                        p { class: "uis-hnt", {t("msgPrsX265Hint")} }
                     }
                 }
                 if !current.video.tunes().is_empty() {
-                    ChoiceField {
-                        label: t("lblPrsTune"),
-                        value: tune_id(current.tune).to_owned(),
-                        options: std::iter::once(Tune::None)
-                            .chain(current.video.tunes().iter().copied())
-                            .map(|tu| (tune_id(tu).to_owned(), tune_label(tu, &lang)))
-                            .collect::<Vec<_>>(),
-                        on_change: move |v: String| {
-                            let tune = [Tune::None, Tune::Film, Tune::Animation, Tune::Grain, Tune::StillImage, Tune::FastDecode, Tune::ZeroLatency]
-                                .into_iter()
-                                .find(|tu| tune_id(*tu) == v);
-                            if let Some(tune) = tune {
-                                edit_preset(settings, &id_for_tune, |p| p.tune = tune);
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsTune")} }
+                        select {
+                            class: "uis-ddn-std",
+                            value: tune_id(current.tune).to_owned(),
+                            onchange: {
+                                let cb = move |v: String| {
+                                    let tune = [Tune::None, Tune::Film, Tune::Animation, Tune::Grain, Tune::StillImage, Tune::FastDecode, Tune::ZeroLatency]
+                                        .into_iter()
+                                        .find(|tu| tune_id(*tu) == v);
+                                    if let Some(tune) = tune {
+                                        edit_preset(settings, &id_for_tune, |p| p.tune = tune);
+                                    }
+                                };
+                                move |e| cb(e.value())
+                            },
+                            for (oid, text) in std::iter::once(Tune::None)
+                                .chain(current.video.tunes().iter().copied())
+                                .map(|tu| (tune_id(tu).to_owned(), tune_label(tu, &lang)))
+                                .collect::<Vec<_>>() {
+                                option { key: "{oid}", value: "{oid}", selected: oid == tune_id(current.tune).to_owned(), "{text}" }
                             }
-                        },
+                        }
                     }
                 }
                 if has_speed {
-                    ChoiceField {
-                        label: t("lblPrsSpeed"),
-                        value: match current.speed { Speed::Ultrafast => "ultrafast", Speed::Fast => "fast", Speed::Balanced => "balanced", Speed::Slow => "slow" }.to_owned(),
-                        options: speed_options,
-                        on_change: move |v: String| {
-                            let speed = match v.as_str() {
-                                "ultrafast" => Speed::Ultrafast,
-                                "fast" => Speed::Fast,
-                                "slow" => Speed::Slow,
-                                _ => Speed::Balanced,
-                            };
-                            edit_preset(settings, &id_for_speed, |p| p.speed = speed);
-                        },
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsSpeed")} }
+                        select {
+                            class: "uis-ddn-std",
+                            value: match current.speed { Speed::Ultrafast => "ultrafast", Speed::Fast => "fast", Speed::Balanced => "balanced", Speed::Slow => "slow" }.to_owned(),
+                            onchange: {
+                                let cb = move |v: String| {
+                                    let speed = match v.as_str() {
+                                        "ultrafast" => Speed::Ultrafast,
+                                        "fast" => Speed::Fast,
+                                        "slow" => Speed::Slow,
+                                        _ => Speed::Balanced,
+                                    };
+                                    edit_preset(settings, &id_for_speed, |p| p.speed = speed);
+                                };
+                                move |e| cb(e.value())
+                            },
+                            for (oid, text) in speed_options {
+                                option { key: "{oid}", value: "{oid}", selected: oid == match current.speed { Speed::Ultrafast => "ultrafast", Speed::Fast => "fast", Speed::Balanced => "balanced", Speed::Slow => "slow" }.to_owned(), "{text}" }
+                            }
+                        }
                     }
                 }
             }
@@ -536,7 +589,7 @@ fn edit_size(mut settings: Signal<Settings>, id: &str, edit: impl FnOnce(&mut Si
 
 /// A labelled catalog number field that may be left empty ("no limit").
 #[component]
-fn OptionalNumberField(
+fn LclFldNumOptional(
     label: String,
     value: Option<u32>,
     min: u32,
@@ -546,10 +599,10 @@ fn OptionalNumberField(
     on_change: EventHandler<Option<u32>>,
 ) -> Element {
     rsx! {
-        div { class: "dlg-field",
-            label { class: "dlg-field-label", "{label}" }
+        div { class: "uis-fld-labelled",
+            label { class: "uis-fld-labelled-label", "{label}" }
             div { class: "manager-row",
-                NumberInput {
+                UisNum {
                     value: value.map(f64::from),
                     min: Some(f64::from(min)),
                     max: Some(f64::from(max)),
@@ -593,10 +646,10 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
 
     rsx! {
         div { class: "manager",
-            div { class: "manager-list",
+            div { class: "manager-list uis-lvw-reorder",
                 div { class: "manager-actions",
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_new}",
                         "aria-label": "{s_new}",
                         onclick: move |_| {
@@ -607,7 +660,7 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdPlus }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_dup}",
                         "aria-label": "{s_dup}",
                         disabled: current.is_none(),
@@ -623,7 +676,7 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdCopy }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_del}",
                         "aria-label": "{s_del}",
                         disabled: current.is_none(),
@@ -636,7 +689,7 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdTrash2 }
                     }
                 }
-                div { class: "lv-scroll",
+                div { class: "uis-lvw-scroll",
                     for z in sizes.iter() {
                         {
                             let id = z.id.clone();
@@ -656,9 +709,9 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                                 button {
                                     key: "{z.id}",
                                     class: match (active, moving) {
-                                        (_, true) => "lv-item reordering",
-                                        (true, _) => "lv-item active",
-                                        _ => "lv-item",
+                                        (_, true) => "uis-lvw-item reordering",
+                                        (true, _) => "uis-lvw-item active",
+                                        _ => "uis-lvw-item",
                                     },
                                     onpointerdown: move |e| {
                                         if e.trigger_button() == Some(MouseButton::Primary) {
@@ -678,25 +731,25 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                                         selected.set(id.clone());
                                         settings.write().size_id = id.clone();
                                     },
-                                    div { class: "lv-item-body",
-                                        div { class: "lv-item-name", "{z.name}" }
+                                    div { class: "uis-lvw-item-body",
+                                        div { class: "uis-lvw-item-name", "{z.name}" }
                                     }
-                                    span { class: "lv-item-badge", "{limit}" }
+                                    span { class: "uis-lvw-item-badge", "{limit}" }
                                 }
                             }
                         }
                     }
                 }
-                p { class: "hint", "{s_reorder}" }
+                p { class: "uis-hnt", "{s_reorder}" }
             }
             // The key makes the fields remount when another size is selected, so they never keep a
             // half-typed draft of the previous one.
             div { class: "manager-form", key: "{cur_id}",
                 if let Some(cur) = &current {
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblPrsName")} }
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsName")} }
                         input {
-                            class: "input",
+                            class: "uis-txt",
                             value: "{cur.name}",
                             oninput: move |e| {
                                 let v = e.value();
@@ -704,7 +757,7 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                             },
                         }
                     }
-                    OptionalNumberField {
+                    LclFldNumOptional {
                         label: t("lblSizeMaxWidth"),
                         value: cur.max_width,
                         min: engine::size::MIN_SIDE,
@@ -713,7 +766,7 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                         unit: "px".to_owned(),
                         on_change: move |v: Option<u32>| edit_size(settings, &id_for_w, |z| z.max_width = v),
                     }
-                    OptionalNumberField {
+                    LclFldNumOptional {
                         label: t("lblSizeMaxHeight"),
                         value: cur.max_height,
                         min: engine::size::MIN_SIDE,
@@ -722,7 +775,7 @@ pub fn SizeEditor(settings: Signal<Settings>) -> Element {
                         unit: "px".to_owned(),
                         on_change: move |v: Option<u32>| edit_size(settings, &id_for_h, |z| z.max_height = v),
                     }
-                    p { class: "hint", {t("msgSizeHint")} }
+                    p { class: "uis-hnt", {t("msgSizeHint")} }
                 }
             }
         }
@@ -763,21 +816,13 @@ pub fn AudioEditor(settings: Signal<Settings>) -> Element {
     let id_for_name = cur_id.clone();
     let id_for_mode = cur_id.clone();
     let id_for_kbps = cur_id.clone();
-    let id_for_channels = cur_id.clone();
-    let id_for_gain = cur_id.clone();
-    let id_for_loud = cur_id.clone();
-    let channel_options = vec![
-        (String::new(), t("lblPrsKeep")),
-        ("1".to_owned(), t("lblPrsMono")),
-        ("2".to_owned(), t("lblPrsStereo")),
-    ];
 
     rsx! {
         div { class: "manager",
-            div { class: "manager-list",
+            div { class: "manager-list uis-lvw-reorder",
                 div { class: "manager-actions",
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_new}",
                         "aria-label": "{s_new}",
                         onclick: move |_| {
@@ -788,7 +833,7 @@ pub fn AudioEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdPlus }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_dup}",
                         "aria-label": "{s_dup}",
                         disabled: current.is_none(),
@@ -804,7 +849,7 @@ pub fn AudioEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdCopy }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_del}",
                         "aria-label": "{s_del}",
                         disabled: current.is_none(),
@@ -817,7 +862,7 @@ pub fn AudioEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdTrash2 }
                     }
                 }
-                div { class: "lv-scroll",
+                div { class: "uis-lvw-scroll",
                     for a in entries.iter() {
                         {
                             let id = a.id.clone();
@@ -829,9 +874,9 @@ pub fn AudioEditor(settings: Signal<Settings>) -> Element {
                                 button {
                                     key: "{a.id}",
                                     class: match (active, moving) {
-                                        (_, true) => "lv-item reordering",
-                                        (true, _) => "lv-item active",
-                                        _ => "lv-item",
+                                        (_, true) => "uis-lvw-item reordering",
+                                        (true, _) => "uis-lvw-item active",
+                                        _ => "uis-lvw-item",
                                     },
                                     onpointerdown: move |e| {
                                         if e.trigger_button() == Some(MouseButton::Primary) {
@@ -851,23 +896,23 @@ pub fn AudioEditor(settings: Signal<Settings>) -> Element {
                                         selected.set(id.clone());
                                         settings.write().audio_id = id.clone();
                                     },
-                                    div { class: "lv-item-body",
-                                        div { class: "lv-item-name", "{a.name}" }
+                                    div { class: "uis-lvw-item-body",
+                                        div { class: "uis-lvw-item-name", "{a.name}" }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                p { class: "hint", "{s_reorder}" }
+                p { class: "uis-hnt", "{s_reorder}" }
             }
             // The key makes the fields remount when another entry is selected.
             div { class: "manager-form", key: "{cur_id}",
                 if let Some(cur) = &current {
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblPrsName")} }
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsName")} }
                         input {
-                            class: "input",
+                            class: "uis-txt",
                             value: "{cur.name}",
                             oninput: move |e| {
                                 let v = e.value();
@@ -875,18 +920,26 @@ pub fn AudioEditor(settings: Signal<Settings>) -> Element {
                             },
                         }
                     }
-                    ChoiceField {
-                        label: t("lblAudMode"),
-                        value: audio_id(cur.mode).to_owned(),
-                        options: mode_options,
-                        on_change: move |v: String| {
-                            if let Some(m) = Audio::ENTRY_MODES.iter().copied().find(|m| audio_id(*m) == v) {
-                                edit_audio(settings, &id_for_mode, |a| a.mode = m);
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblAudMode")} }
+                        select {
+                            class: "uis-ddn-std",
+                            value: audio_id(cur.mode).to_owned(),
+                            onchange: {
+                                let cb = move |v: String| {
+                                    if let Some(m) = Audio::ENTRY_MODES.iter().copied().find(|m| audio_id(*m) == v) {
+                                        edit_audio(settings, &id_for_mode, |a| a.mode = m);
+                                    }
+                                };
+                                move |e| cb(e.value())
+                            },
+                            for (oid, text) in mode_options {
+                                option { key: "{oid}", value: "{oid}", selected: oid == audio_id(cur.mode).to_owned(), "{text}" }
                             }
-                        },
+                        }
                     }
                     if cur.mode.has_bitrate() {
-                        NumberField {
+                        LclFldNum {
                             label: t("lblAudBitrate"),
                             value: cur.kbps,
                             min: 32,
@@ -895,50 +948,7 @@ pub fn AudioEditor(settings: Signal<Settings>) -> Element {
                             on_change: move |v: u32| edit_audio(settings, &id_for_kbps, |a| a.kbps = v),
                         }
                     }
-                    if cur.mode.encodes() {
-                        div { class: "dlg-field",
-                            label { class: "dlg-field-label", {t("lblAudGain")} }
-                            div { class: "manager-row",
-                                NumberInput {
-                                    value: Some(f64::from(cur.gain_db)),
-                                    min: Some(-30.0),
-                                    max: Some(30.0),
-                                    step: 1.0,
-                                    width: "74px".to_owned(),
-                                    on_change: move |v: Option<f64>| {
-                                        if let Some(n) = v {
-                                            edit_audio(settings, &id_for_gain, |a| a.gain_db = n.round() as i32);
-                                        }
-                                    },
-                                }
-                                span { "dB" }
-                            }
-                        }
-                        div { class: "dlg-field",
-                            label { class: "check-label",
-                                input {
-                                    class: "check-box",
-                                    r#type: "checkbox",
-                                    checked: cur.loudness,
-                                    onchange: move |ev| {
-                                        let on = ev.checked();
-                                        edit_audio(settings, &id_for_loud, |a| a.loudness = on);
-                                    },
-                                }
-                                {t("lblAudLoudness")}
-                            }
-                        }
-                        ChoiceField {
-                            label: t("lblPrsChannels"),
-                            value: cur.channels.map(|n| n.to_string()).unwrap_or_default(),
-                            options: channel_options,
-                            on_change: move |v: String| {
-                                let n = v.parse::<u8>().ok();
-                                edit_audio(settings, &id_for_channels, |a| a.channels = n);
-                            },
-                        }
-                    }
-                    p { class: "hint", {t("msgAudioHint")} }
+                    p { class: "uis-hnt", {t("msgAudioHint")} }
                 }
             }
         }
@@ -1042,11 +1052,11 @@ fn MetaNamesField(settings: Signal<Settings>, id: String, lang: String, mode: Mo
     let onkeyup_track = track.clone();
     let onclick_track = track;
     rsx! {
-        div { class: "dlg-field",
-            label { class: "dlg-field-label", "{label}" }
+        div { class: "uis-fld-labelled",
+            label { class: "uis-fld-labelled-label", "{label}" }
             textarea {
                 id: "{box_id}",
-                class: "textarea",
+                class: "uis-txt-area",
                 rows: "5",
                 spellcheck: "false",
                 value: "{raw}",
@@ -1069,7 +1079,7 @@ fn MetaNamesField(settings: Signal<Settings>, id: String, lang: String, mode: Mo
                             rsx! {
                                 button {
                                     key: "{name}",
-                                    class: "chip",
+                                    class: "uis-chp",
                                     onclick: move |_| {
                                         let (new_text, end) = replace_span(&raw(), (start, end), name);
                                         let list: Vec<String> = new_text.lines().map(str::to_owned).collect();
@@ -1088,7 +1098,7 @@ fn MetaNamesField(settings: Signal<Settings>, id: String, lang: String, mode: Mo
                     }
                 }
             }
-            p { class: "hint", "{hint}" }
+            p { class: "uis-hnt", "{hint}" }
         }
     }
 }
@@ -1125,10 +1135,10 @@ pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
 
     rsx! {
         div { class: "manager",
-            div { class: "manager-list",
+            div { class: "manager-list uis-lvw-reorder",
                 div { class: "manager-actions",
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_new}",
                         "aria-label": "{s_new}",
                         onclick: move |_| {
@@ -1141,7 +1151,7 @@ pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdPlus }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_dup}",
                         "aria-label": "{s_dup}",
                         onclick: move |_| {
@@ -1158,7 +1168,7 @@ pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdCopy }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_del}",
                         "aria-label": "{s_del}",
                         disabled: !can_delete,
@@ -1171,7 +1181,7 @@ pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdTrash2 }
                     }
                 }
-                div { class: "lv-scroll",
+                div { class: "uis-lvw-scroll",
                     for m in listed.iter() {
                         {
                             let id = m.id.clone();
@@ -1183,9 +1193,9 @@ pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
                                 button {
                                     key: "{m.id}",
                                     class: match (active, moving) {
-                                        (_, true) => "lv-item reordering",
-                                        (true, _) => "lv-item active",
-                                        _ => "lv-item",
+                                        (_, true) => "uis-lvw-item reordering",
+                                        (true, _) => "uis-lvw-item active",
+                                        _ => "uis-lvw-item",
                                     },
                                     onpointerdown: move |e| {
                                         if e.trigger_button() == Some(MouseButton::Primary) {
@@ -1205,23 +1215,23 @@ pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
                                         selected.set(id.clone());
                                         settings.write().metadata_id = id.clone();
                                     },
-                                    div { class: "lv-item-body",
-                                        div { class: "lv-item-name", "{m.name}" }
+                                    div { class: "uis-lvw-item-body",
+                                        div { class: "uis-lvw-item-name", "{m.name}" }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                p { class: "hint", "{s_reorder}" }
+                p { class: "uis-hnt", "{s_reorder}" }
             }
             div { class: "manager-form",
                 if let Some(m) = current {
                   Fragment { key: "{cur_id}",
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", "{s_name}" }
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", "{s_name}" }
                         input {
-                            class: "input",
+                            class: "uis-txt",
                             value: "{m.name}",
                             oninput: move |e| {
                                 let v = e.value();
@@ -1229,10 +1239,10 @@ pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
                             },
                         }
                     }
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", "{s_mode}" }
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", "{s_mode}" }
                         select {
-                            class: "select",
+                            class: "uis-ddn-std",
                             value: if m.mode == Mode::Delete { "delete" } else { "keep" },
                             onchange: move |e| {
                                 let mode = if e.value() == "delete" { Mode::Delete } else { Mode::Keep };
@@ -1243,10 +1253,10 @@ pub fn MetadataEditor(settings: Signal<Settings>) -> Element {
                         }
                     }
                     MetaNamesField { settings, id: cur_id.clone(), lang: lang.clone(), mode: m.mode }
-                    div { class: "dlg-field",
-                        label { class: "check-label",
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-chk-lbl",
                             input {
-                                class: "check-box",
+                                class: "uis-chk-box",
                                 r#type: "checkbox",
                                 checked: m.remove_chapters,
                                 onchange: move |e| {
@@ -1299,10 +1309,10 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
 
     rsx! {
         div { class: "manager",
-            div { class: "manager-list",
+            div { class: "manager-list uis-lvw-reorder",
                 div { class: "manager-actions",
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_new}",
                         "aria-label": "{s_new}",
                         onclick: move |_| {
@@ -1313,7 +1323,7 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdPlus }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_dup}",
                         "aria-label": "{s_dup}",
                         disabled: current.is_none(),
@@ -1329,7 +1339,7 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdCopy }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_del}",
                         "aria-label": "{s_del}",
                         disabled: current.is_none(),
@@ -1342,7 +1352,7 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
                         Icon { width: 14, height: 14, icon: LdTrash2 }
                     }
                 }
-                div { class: "lv-scroll",
+                div { class: "uis-lvw-scroll",
                     for d in entries.iter() {
                         {
                             let id = d.id.clone();
@@ -1354,9 +1364,9 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
                                 button {
                                     key: "{d.id}",
                                     class: match (active, moving) {
-                                        (_, true) => "lv-item reordering",
-                                        (true, _) => "lv-item active",
-                                        _ => "lv-item",
+                                        (_, true) => "uis-lvw-item reordering",
+                                        (true, _) => "uis-lvw-item active",
+                                        _ => "uis-lvw-item",
                                     },
                                     onpointerdown: move |e| {
                                         if e.trigger_button() == Some(MouseButton::Primary) {
@@ -1376,24 +1386,24 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
                                         selected.set(id.clone());
                                         settings.write().destination_id = id.clone();
                                     },
-                                    div { class: "lv-item-body",
-                                        div { class: "lv-item-name", "{d.name}" }
-                                        div { class: "lv-item-sub", "{d.folder}" }
+                                    div { class: "uis-lvw-item-body",
+                                        div { class: "uis-lvw-item-name", "{d.name}" }
+                                        div { class: "uis-lvw-item-sub", "{d.folder}" }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                p { class: "hint", "{s_reorder}" }
+                p { class: "uis-hnt", "{s_reorder}" }
             }
             // The key makes the fields remount when another destination is selected.
             div { class: "manager-form", key: "{cur_id}",
                 if let Some(cur) = &current {
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblPrsName")} }
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsName")} }
                         input {
-                            class: "input",
+                            class: "uis-txt",
                             value: "{cur.name}",
                             oninput: move |e| {
                                 let v = e.value();
@@ -1401,11 +1411,11 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
                             },
                         }
                     }
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblDstFolder")} }
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblDstFolder")} }
                         div { class: "manager-row",
                             input {
-                                class: "input",
+                                class: "uis-txt",
                                 placeholder: t("lblMainDestSource"),
                                 value: "{cur.folder}",
                                 oninput: move |e| {
@@ -1414,7 +1424,7 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
                                 },
                             }
                             button {
-                                class: "btn",
+                                class: "uis-btn",
                                 title: t("tipMainChooseFolder"),
                                 onclick: move |_| {
                                     let id = id_for_browse.clone();
@@ -1430,7 +1440,7 @@ pub fn DestinationEditor(settings: Signal<Settings>) -> Element {
                             }
                         }
                     }
-                    p { class: "hint", {t("msgDstHint")} }
+                    p { class: "uis-hnt", {t("msgDstHint")} }
                 }
             }
         }
@@ -1446,10 +1456,10 @@ pub fn NotifyEditor(settings: Signal<Settings>) -> Element {
     rsx! {
         div { class: "manager",
             div { class: "manager-form",
-                div { class: "dlg-field",
-                    label { class: "check-label",
+                div { class: "uis-fld-labelled",
+                    label { class: "uis-chk-lbl",
                         input {
-                            class: "check-box",
+                            class: "uis-chk-box",
                             r#type: "checkbox",
                             checked: on,
                             onchange: move |e| settings.write().notify = e.checked(),

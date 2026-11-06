@@ -5,12 +5,50 @@
 //! The file name is plain (`settings.json`) — the folder is already per-app, so there is no
 //! storage-prefix to namespace it.
 
-use engine::{AudioEntry, Destination, EffectsEntry, MetadataCleanup, Overwrite, Preset, Size, audio, destination::SOURCE_ID, effects, metadata, size::ORIGINAL_ID};
+use engine::{AudioEntry, Destination, EffectsEntry, MetadataCleanup, Overwrite, Preset, Size, audio, destination::SOURCE_ID, effects, metadata, preset::Encoder, size::ORIGINAL_ID};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
     path::{Path, PathBuf},
 };
+
+/// The choices of ONE view's options panel. The batch view's are the flat fields of `Settings` (the file format of
+/// every earlier version); the work view has its own set, so changing one view never changes the other.
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Panel {
+    /// False until it has been given its first values (copied from the batch view's, once, when an older settings file
+    /// is read); `Settings::repaired` does that.
+    pub initialised: bool,
+    pub preset_id: String,
+    pub size_id: String,
+    pub audio_id: String,
+    pub metadata_id: String,
+    pub destination_id: String,
+    pub overwrite: Overwrite,
+    pub parallel: u32,
+}
+
+impl Panel {
+    fn seeded(initialised: bool) -> Panel {
+        Panel {
+            initialised,
+            preset_id: engine::preset::defaults()[0].id.clone(),
+            size_id: ORIGINAL_ID.to_owned(),
+            audio_id: audio::ORIGINAL_ID.to_owned(),
+            metadata_id: metadata::STANDARD_ID.to_owned(),
+            destination_id: SOURCE_ID.to_owned(),
+            overwrite: Overwrite::Skip,
+            parallel: 1,
+        }
+    }
+}
+
+impl Default for Panel {
+    fn default() -> Panel {
+        Panel::seeded(false)
+    }
+}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -19,6 +57,8 @@ pub struct Settings {
     pub theme: String,
     /// The user's presets; a fresh install gets the seeded ones (stable ids `default-...`).
     pub presets: Vec<Preset>,
+    /// Which engine encodes H.264 and H.265 for every preset that does not ask for software.
+    pub encoder: Encoder,
     /// The selected preset.
     pub preset_id: String,
     /// The user's sizes (the largest picture a run may produce). "(Original)" is the window's own
@@ -35,6 +75,11 @@ pub struct Settings {
     pub effects: Vec<EffectsEntry>,
     /// The selected entry; `none` when none.
     pub effects_id: String,
+    /// The user's audio effects entries (what is done to the sound: an equaliser, a compressor, a noise gate). Their own list, beside the
+    /// picture's; "(None)" is the window's own choice and is never stored, and a fresh install has none.
+    pub audio_effects: Vec<EffectsEntry>,
+    /// The selected audio effects entry; `none` when none.
+    pub audio_effects_id: String,
     /// The user's metadata settings (which tags and chapters are left out). Never zero, like presets: a fresh install
     /// has one that keeps everything.
     pub metadata: Vec<MetadataCleanup>,
@@ -50,6 +95,8 @@ pub struct Settings {
     pub parallel: u32,
     /// Show the operating system's notice when a run ends.
     pub notify: bool,
+    /// The work view's own panel choices.
+    pub work: Panel,
 }
 
 impl Default for Settings {
@@ -61,12 +108,15 @@ impl Default for Settings {
            
             preset_id: presets[0].id.clone(),
             presets,
+            encoder: Encoder::Software,
             sizes: engine::size::defaults(),
             size_id: ORIGINAL_ID.to_owned(),
             audios: audio::defaults(),
             audio_id: audio::ORIGINAL_ID.to_owned(),
             effects: effects::defaults(),
             effects_id: effects::NONE_ID.to_owned(),
+            audio_effects: vec![EffectsEntry::standard_sound(&crate::i18n::t("en", "lblMainEffectsNone"))],
+            audio_effects_id: effects::SOUND_STANDARD_ID.to_owned(),
             metadata: metadata::defaults(),
             metadata_id: metadata::STANDARD_ID.to_owned(),
             destinations: Vec::new(),
@@ -74,6 +124,7 @@ impl Default for Settings {
             overwrite: Overwrite::Skip,
             parallel: 1,
             notify: true,
+            work: Panel::seeded(true),
         }
     }
 }
@@ -87,7 +138,10 @@ pub fn max_parallel() -> u32 {
 impl Settings {
     /// Never zero presets, a dangling selection falls back, every preset is what its container holds.
     pub fn repaired(mut self) -> Settings {
-        self.presets = self.presets.into_iter().map(Preset::normalized).collect();
+        // A file from before the engine was a setting: the six graphics-card presets are gone (the engine is chosen in Settings), and any
+        // other preset that named a card's encoder is that codec's family.
+        self.presets.retain(|p| !engine::preset::RETIRED_HARDWARE_IDS.contains(&p.id.as_str()));
+        self.presets = self.presets.into_iter().map(Preset::into_family).map(Preset::normalized).collect();
         if self.presets.is_empty() {
             self.presets = engine::preset::defaults();
         }
@@ -106,6 +160,14 @@ impl Settings {
         if self.effects_id != effects::NONE_ID && !self.effects.iter().any(|e| e.id == self.effects_id) {
             self.effects_id = effects::NONE_ID.to_owned();
         }
+        self.audio_effects = self.audio_effects.into_iter().map(EffectsEntry::normalized).collect();
+        // Never zero sound entries, as FFmpeg Audio Studio: an ordinary entry with no effect in it is the one a fresh install starts with.
+        if self.audio_effects.is_empty() {
+            self.audio_effects.push(EffectsEntry::standard_sound(&crate::i18n::t(&self.lang, "lblMainEffectsNone")));
+        }
+        if self.audio_effects_id != effects::NONE_ID && !self.audio_effects.iter().any(|e| e.id == self.audio_effects_id) {
+            self.audio_effects_id = effects::NONE_ID.to_owned();
+        }
         // The metadata entries keep what the user typed (the list is tidied when a job runs). Never zero.
         if self.metadata.is_empty() {
             self.metadata = metadata::defaults();
@@ -118,7 +180,43 @@ impl Settings {
             self.destination_id = SOURCE_ID.to_owned();
         }
         self.parallel = self.parallel.clamp(1, max_parallel());
+        // The work view's panel: copied from the batch view's the first time (an older file has none), then its own.
+        if !self.work.initialised {
+            self.work = Panel { initialised: true, ..self.panel() };
+        }
+        let mut w = self.work.clone();
+        if !self.presets.iter().any(|p| p.id == w.preset_id) {
+            w.preset_id = self.presets[0].id.clone();
+        }
+        if w.size_id != ORIGINAL_ID && !self.sizes.iter().any(|z| z.id == w.size_id) {
+            w.size_id = ORIGINAL_ID.to_owned();
+        }
+        if w.audio_id != audio::ORIGINAL_ID && !self.audios.iter().any(|a| a.id == w.audio_id) {
+            w.audio_id = audio::ORIGINAL_ID.to_owned();
+        }
+        if !self.metadata.iter().any(|m| m.id == w.metadata_id) {
+            w.metadata_id = self.metadata[0].id.clone();
+        }
+        if w.destination_id != SOURCE_ID && !self.destinations.iter().any(|d| d.id == w.destination_id) {
+            w.destination_id = SOURCE_ID.to_owned();
+        }
+        w.parallel = w.parallel.clamp(1, max_parallel());
+        self.work = w;
         self
+    }
+
+    /// The batch view's panel choices.
+    pub fn panel(&self) -> Panel {
+        Panel {
+            initialised: true,
+            preset_id: self.preset_id.clone(),
+            size_id: self.size_id.clone(),
+            audio_id: self.audio_id.clone(),
+            metadata_id: self.metadata_id.clone(),
+            destination_id: self.destination_id.clone(),
+            overwrite: self.overwrite,
+            parallel: self.parallel,
+        }
     }
 
     /// The id of the destination that writes into `dir`: one already saved for it, or a new entry named after the folder.
@@ -147,6 +245,63 @@ impl Settings {
         self.effects.iter().find(|e| e.id == id).cloned().unwrap_or_else(EffectsEntry::none)
     }
 
+    /// An audio effects entry by id; nothing when there is none of that id.
+    /// A settings file from before 2026-11-01 holds a level change, a loudness switch and a channel count on its audio entries; they are sound
+    /// effects now, so each entry that had one gets an entry of the audio effects list (named after it) holding the same filters in the same
+    /// order, and the one of the selected audio entry is selected. The entries do not write the fields back, so this happens once.
+    fn take_over_sound_settings(&mut self, text: &str) {
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(text) else { return };
+        for old in json.get("audios").and_then(|a| a.as_array()).into_iter().flatten() {
+            let gain = old.get("gain_db").and_then(|g| g.as_i64()).unwrap_or(0);
+            let loud = old.get("loudness").and_then(|l| l.as_bool()).unwrap_or(false);
+            let way = match old.get("channels").and_then(|c| c.as_u64()) {
+                Some(1) => Some("mono"),
+                Some(2) => Some("stereo"),
+                _ => None,
+            };
+            if gain == 0 && !loud && way.is_none() {
+                continue;
+            }
+            let name = old.get("name").and_then(|n| n.as_str()).unwrap_or_default();
+            let mut entry = EffectsEntry::new(name);
+            if gain != 0 {
+                entry.items.push(effects::Item::with("try:volume", &[("volume", &format!("{gain}dB"))]));
+            }
+            if loud {
+                entry.items.push(effects::Item::with("try:loudnorm", &[("I", "-16"), ("TP", "-1.5"), ("LRA", "11")]));
+            }
+            if let Some(way) = way {
+                entry.items.push(effects::Item::with("channels", &[("mode", way)]));
+            }
+            if old.get("id").and_then(|i| i.as_str()) == Some(self.audio_id.as_str()) && (self.audio_effects_id == effects::NONE_ID || self.audio_effects_id == effects::SOUND_STANDARD_ID) {
+                self.audio_effects_id = entry.id.clone();
+            }
+            self.audio_effects.push(entry);
+        }
+    }
+
+    pub fn audio_effects_by(&self, id: &str) -> EffectsEntry {
+        self.audio_effects.iter().find(|e| e.id == id).cloned().unwrap_or_else(EffectsEntry::none)
+    }
+
+    /// The list of effects entries of a kind: the picture's, or the sound's (`sound`). The shared effects editor asks for the one it edits.
+    pub fn effects_list(&self, sound: bool) -> &Vec<EffectsEntry> {
+        if sound { &self.audio_effects } else { &self.effects }
+    }
+
+    pub fn effects_list_mut(&mut self, sound: bool) -> &mut Vec<EffectsEntry> {
+        if sound { &mut self.audio_effects } else { &mut self.effects }
+    }
+
+    /// The id of the selected entry of that list.
+    pub fn effects_choice(&self, sound: bool) -> &str {
+        if sound { &self.audio_effects_id } else { &self.effects_id }
+    }
+
+    pub fn effects_choice_mut(&mut self, sound: bool) -> &mut String {
+        if sound { &mut self.audio_effects_id } else { &mut self.effects_id }
+    }
+
     /// An audio entry by id; the original rule when there is none of that id.
     pub fn audio_by(&self, id: &str) -> AudioEntry {
         self.audios.iter().find(|a| a.id == id).cloned().unwrap_or_else(AudioEntry::original)
@@ -161,29 +316,60 @@ impl Settings {
         self.presets.iter().find(|p| p.id == id).unwrap_or(&self.presets[0]).clone()
     }
 
+    /// The preset a job runs: `preset_by`, with the engine Settings names where the preset leaves it to Settings.
+    pub fn run_preset(&self, id: &str) -> Preset {
+        engine::hardware::resolve(&self.preset_by(id), self.encoder)
+    }
+
     pub fn selected_preset(&self) -> Preset {
         self.preset_by(&self.preset_id)
     }
 
     /// The selected audio entry's id, or the original when the selected preset's container cannot hold it.
     pub fn effective_audio_id(&self) -> String {
-        let preset = self.selected_preset();
-        let holds = self.audios.iter().any(|a| a.id == self.audio_id && a.available_for(&preset));
-        if holds { self.audio_id.clone() } else { audio::ORIGINAL_ID.to_owned() }
+        self.effective_audio_id_of(&self.panel())
+    }
+
+    /// The same, for the choices of the panel `p` (the batch view's or the work view's).
+    pub fn effective_audio_id_of(&self, p: &Panel) -> String {
+        let preset = self.preset_by(&p.preset_id);
+        let holds = self.audios.iter().any(|a| a.id == p.audio_id && a.available_for(&preset));
+        if holds { p.audio_id.clone() } else { audio::ORIGINAL_ID.to_owned() }
     }
 
     /// Everything a run is made of, as the panel shows it now (the cut is the window's own, not saved).
+    /// The effects a file is converted with: the work view's own list when it has one (picture and sound effects together), else the saved
+    /// picture entry it names followed by the saved sound entry it names.
+    pub fn effects_of(&self, run: &RunChoice) -> EffectsEntry {
+        if let Some(own) = &run.effects_inline {
+            return own.clone();
+        }
+        let mut all = self.effects_by(&run.effects_id);
+        all.items.extend(self.audio_effects_by(&run.audio_effects_id).items);
+        all
+    }
+
     pub fn choice(&self, trim_start: &str, trim_end: &str) -> RunChoice {
+        let mut run = self.choice_of(&self.panel(), trim_start, trim_end);
+        run.effects_id = self.effects_id.clone();
+        run.audio_effects_id = self.audio_effects_id.clone();
+        run
+    }
+
+    /// Everything a run is made of, from the choices of the panel `p`.
+    pub fn choice_of(&self, p: &Panel, trim_start: &str, trim_end: &str) -> RunChoice {
         RunChoice {
-            preset_id: self.preset_id.clone(),
-            size_id: self.size_id.clone(),
-            audio_id: self.effective_audio_id(),
-            effects_id: self.effects_id.clone(),
-            metadata_id: self.metadata_id.clone(),
+            preset_id: p.preset_id.clone(),
+            size_id: p.size_id.clone(),
+            audio_id: self.effective_audio_id_of(p),
+            effects_id: effects::NONE_ID.to_owned(),
+            audio_effects_id: effects::NONE_ID.to_owned(),
+            effects_inline: None,
+            metadata_id: p.metadata_id.clone(),
             trim_start: trim_start.to_owned(),
             trim_end: trim_end.to_owned(),
-            destination_id: self.destination_id.clone(),
-            overwrite: self.overwrite,
+            destination_id: p.destination_id.clone(),
+            overwrite: p.overwrite,
         }
     }
 }
@@ -196,6 +382,10 @@ pub struct RunChoice {
     pub size_id: String,
     pub audio_id: String,
     pub effects_id: String,
+    /// The saved entry of sound effects the file names; unused when `effects_inline` is there (it holds both kinds).
+    pub audio_effects_id: String,
+    /// The work view's own list of effects, when the file was applied from there: it is used instead of the saved entry `effects_id`.
+    pub effects_inline: Option<EffectsEntry>,
     pub metadata_id: String,
     pub trim_start: String,
     pub trim_end: String,
@@ -219,6 +409,11 @@ fn path() -> Option<PathBuf> {
     Some(dirs::data_dir()?.join("yaiol").join(folder).join("settings.json"))
 }
 
+/// The folder the log file lives in, beside the settings.
+pub fn log_dir() -> Option<PathBuf> {
+    Some(path()?.parent()?.join("logs"))
+}
+
 pub fn load() -> Settings {
     path().map(|p| load_from(&p)).unwrap_or_default()
 }
@@ -230,11 +425,22 @@ pub fn save(settings: &Settings) {
 }
 
 fn load_from(path: &Path) -> Settings {
-    fs::read_to_string(path)
-        .ok()
-        .and_then(|text| serde_json::from_str::<Settings>(&text).ok())
-        .unwrap_or_default()
-        .repaired()
+    let read = match fs::read_to_string(path) {
+        Ok(text) => serde_json::from_str::<Settings>(&text).map_err(|e| format!("cannot read {}: {e}", path.display())),
+        // No file yet is the first launch, not a problem.
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Err(String::new()),
+        Err(e) => Err(format!("cannot read {}: {e}", path.display())),
+    };
+    if let Err(why) = &read {
+        if !why.is_empty() {
+            engine::log::error("settings", &format!("{why} - the defaults are used"));
+        }
+    }
+    let mut settings = read.unwrap_or_default();
+    if let Ok(text) = fs::read_to_string(path) {
+        settings.take_over_sound_settings(&text);
+    }
+    settings.repaired()
 }
 
 fn save_to(path: &Path, settings: &Settings) {
@@ -252,6 +458,44 @@ mod tests {
 
     fn temp(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!("yaiol-settings-test-{}-{name}", std::process::id()))
+    }
+
+    #[test]
+    fn a_file_with_a_saved_picture_entry_and_a_saved_sound_entry_is_converted_with_both() {
+        let mut cfg = Settings::default();
+        let mut picture = EffectsEntry::new("picture");
+        picture.items.push(engine::effects::Item::new("flip"));
+        let mut sound = EffectsEntry::new("sound");
+        sound.items.push(engine::effects::Item::new("try:acontrast"));
+        cfg.effects = vec![picture.clone()];
+        cfg.audio_effects = vec![sound.clone()];
+        let mut run = cfg.choice_of(&cfg.work, "", "");
+        run.effects_id = picture.id.clone();
+        run.audio_effects_id = sound.id.clone();
+        let keys: Vec<String> = cfg.effects_of(&run).items.into_iter().map(|i| i.key).collect();
+        assert_eq!(keys, vec!["flip".to_owned(), "try:acontrast".to_owned()]);
+        // a dangling selection of the sound list falls back to none
+        cfg.audio_effects_id = "gone".to_owned();
+        assert_eq!(cfg.repaired().audio_effects_id, effects::NONE_ID);
+    }
+
+    #[test]
+    fn the_level_loudness_and_channels_of_an_old_audio_entry_become_a_sound_effects_entry() {
+        let old = r#"{"audios":[{"id":"a1","name":"Loud AAC","mode":"aac","kbps":192,"gain_db":6,"loudness":true,"channels":2},{"id":"a2","name":"Plain","mode":"aac","kbps":128,"gain_db":0,"loudness":false}],"audio_id":"a1"}"#;
+        let mut cfg: Settings = serde_json::from_str(old).unwrap();
+        cfg.take_over_sound_settings(old);
+        // the standard entry is there from the start; the taken-over one follows it
+        assert_eq!(cfg.audio_effects.len(), 2);
+        assert_eq!(cfg.audio_effects[1].name, "Loud AAC");
+        let keys: Vec<&str> = cfg.audio_effects[1].items.iter().map(|i| i.key.as_str()).collect();
+        assert_eq!(keys, ["try:volume", "try:loudnorm", "channels"]);
+        assert_eq!(cfg.audio_effects_id, cfg.audio_effects[1].id);
+        // written back, the entry no longer holds the old fields, so a second read finds nothing to take over
+        let saved = serde_json::to_string(&cfg).unwrap();
+        let mut again: Settings = serde_json::from_str(&saved).unwrap();
+        let before = again.audio_effects.len();
+        again.take_over_sound_settings(&saved);
+        assert_eq!(again.audio_effects.len(), before);
     }
 
     #[test]
@@ -280,6 +524,28 @@ mod tests {
         assert!(!s.presets.is_empty());
         assert_eq!(s.preset_id, s.presets[0].id);
         assert!(s.parallel <= max_parallel());
+        let _ = fs::remove_file(p);
+    }
+
+    #[test]
+    fn a_file_from_before_the_engine_was_a_setting_loses_the_card_presets_and_reads_a_card_codec_as_its_family() {
+        let p = temp("engine");
+        fs::write(
+            &p,
+            r#"{ "presets": [
+                { "id": "default-h264-nvenc", "name": "H.264 NVIDIA graphics card (MKV)", "video": "h264nvenc" },
+                { "id": "mine", "name": "Mine", "video": "h265amd" },
+                { "id": "default-h264-hq", "name": "H.264 high quality (MKV)", "video": "h264" } ],
+               "preset_id": "default-h264-nvenc" }"#,
+        )
+        .unwrap();
+        let s = load_from(&p);
+        let ids: Vec<&str> = s.presets.iter().map(|p| p.id.as_str()).collect();
+        assert_eq!(ids, ["mine", "default-h264-hq"]);
+        assert_eq!(s.presets[0].video, engine::preset::VideoCodec::H265);
+        assert_eq!(s.presets[0].encoder, engine::preset::PresetEncoder::Default);
+        assert_eq!(s.encoder, Encoder::Software);
+        assert_eq!(s.preset_id, "mine");
         let _ = fs::remove_file(p);
     }
 

@@ -281,7 +281,7 @@ pub fn suggest_names(typed: &str, taken: &[String], limit: usize) -> Vec<&'stati
     starts
 }
 
-/// What a fresh install starts with: one entry that keeps everything, like Audio Converter's tag cleaning.
+/// What a fresh install starts with: one entry that keeps everything, like FFmpeg Audio Studio's tag cleaning.
 pub fn defaults() -> Vec<MetadataCleanup> {
     vec![MetadataCleanup::standard("Keep all tags")]
 }

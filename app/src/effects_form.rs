@@ -5,16 +5,16 @@
 //!
 //! Controlled: the form shows `values` (the control id → value map the engine reads) and calls `on_change` with the whole map
 //! after a field changed; the caller keeps it, builds the ffmpeg text from it (`engine::ffmpeg_effects::args`) and stores it.
-//! Like `ColorPicker` it carries no i18n coupling: every word it writes comes in `FormText`, and the lists of names ffmpeg knows
+//! Like `UisPkrColor` it carries no i18n coupling: every word it writes comes in `FormText`, and the lists of names ffmpeg knows
 //! (sizes, frame rates, pixel formats ...) come in `Named`, read from `ffmpeg-named-values.json` (empty = the fields work, offer no names).
 //! A file field has a Browse button that only reports (`on_browse`): the caller opens its dialog and puts the path back in `values`.
 //!
-//! Needs from the app's catalog: `ColorPicker`, `NumberInput` (= the shared NumberField). The class names are the app's own
-//! (`dlg-field`, `dlg-field-label`, `input`, `select`, `btn`, `hint`); the few of its own are in `effects_form.css`, beside this file.
+//! Needs from the app's catalog: `UisPkrColor`, `UisNum` (= the shared UisNum). The class names are the app's own
+//! (`dlg-field`, `dlg-field-label`, `txt`, `ddn`, `btn`, `hint`); the few of its own are in `effects_form.css`, beside this file.
 //! Left out on purpose (the catalogue pages show them, a user does not need them): the check results under a form, the origin tooltip
 //! of a label, the raw ffmpeg name beside it, the "Not listed ... second spellings" note and the command box.
 
-use crate::catalog::{ColorPicker, NumberInput};
+use crate::catalog::{UisCboStandard, UisComboItem, UisPkrColor, UisNum};
 use dioxus::prelude::*;
 use dioxus_free_icons::{Icon, icons::ld_icons::LdRotateCcw};
 use engine::ffmpeg_effects::{
@@ -179,14 +179,39 @@ fn round_to(x: f64, places: f64) -> f64 {
     (x * places).round() / places
 }
 
-/// A colour's `#rrggbb`: what the picker starts from. A name or anything else starts it at black.
+/// A colour's `#rrggbb`: what the picker starts from. A name ffmpeg knows (its CSS table, the common ones here) gives its own
+/// colour; anything else starts it at black.
 fn colour_hex(s: &str) -> String {
     let s = s.trim();
     let body = s.strip_prefix('#').or_else(|| s.strip_prefix("0x")).or_else(|| s.strip_prefix("0X"));
     match body {
         Some(b) if b.len() >= 6 && b[..6].chars().all(|c| c.is_ascii_hexdigit()) => format!("#{}", b[..6].to_ascii_lowercase()),
-        _ => "#000000".to_string(),
+        _ => named_colour(&s.to_ascii_lowercase()).unwrap_or("#000000").to_string(),
     }
+}
+
+fn named_colour(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "white" => "#ffffff",
+        "red" => "#ff0000",
+        "green" => "#008000",
+        "lime" => "#00ff00",
+        "blue" => "#0000ff",
+        "yellow" => "#ffff00",
+        "cyan" | "aqua" => "#00ffff",
+        "magenta" | "fuchsia" => "#ff00ff",
+        "gray" | "grey" => "#808080",
+        "orange" => "#ffa500",
+        "pink" => "#ffc0cb",
+        "purple" => "#800080",
+        "brown" => "#a52a2a",
+        "silver" => "#c0c0c0",
+        "navy" => "#000080",
+        "maroon" => "#800000",
+        "olive" => "#808000",
+        "teal" => "#008080",
+        _ => return None,
+    })
 }
 
 #[component]
@@ -199,6 +224,15 @@ pub fn EffectForm(
     #[props(default)] named: Named,
     #[props(default)] text: FormText,
     #[props(default)] on_browse: EventHandler<BrowseRequest>,
+    /// A dense panel: each control's label and control on ONE line, its help as a tooltip, no command preview.
+    #[props(default)]
+    compact: bool,
+    /// The controls (ids) the form stands for several entries that disagree on: shown blank (a switch in its third state) until one is touched.
+    #[props(default)]
+    mixed: BTreeSet<String>,
+    /// A control was touched, by its id - also when it was set to what `values` already held.
+    #[props(default)]
+    on_touch: EventHandler<String>,
 ) -> Element {
     let Some(form) = catalog.0.form(&effect) else {
         return rsx! {};
@@ -208,25 +242,30 @@ pub fn EffectForm(
     let starts = defaults(&form, &catalog.0.filters).unwrap_or_default();
     if controls.is_empty() {
         return rsx! {
-            p { class: "hint", "{text.nothing}" }
+            p { class: "uis-hnt", "{text.nothing}" }
             pre { class: "cmd", "{command}" }
         };
     }
     rsx! {
-        div { class: "effect-form",
+        div { class: if compact { "effect-form compact" } else { "effect-form" },
             for c in controls {
                 Field {
                     key: "{c.id}",
                     start: starts.get(&c.id).cloned(),
+                    mixed: mixed.contains(&c.id),
                     control: c,
                     values: values.clone(),
                     on_change,
+                    on_touch,
                     named: named.clone(),
                     text: text.clone(),
                     on_browse,
+                    compact,
                 }
             }
-            pre { class: "cmd", "{command}" }
+            if !compact {
+                pre { class: "cmd", "{command}" }
+            }
         }
     }
 }
@@ -234,7 +273,7 @@ pub fn EffectForm(
 /// What the form's choices turn into for ffmpeg, as the pages show it (one `-flag value` per line; a value with a space or a
 /// filter-graph bracket in double quotes). An input and a font stand in for the ones the conversion will name.
 fn command_text(form: &Effect, filters: &Filters, values: &Values) -> String {
-    let ctx: Ctx = [("input", "C:/Videos/movie.mkv"), ("font", "C:/Windows/Fonts/arial.ttf"), ("duration", "180")]
+    let ctx: Ctx = [("input", "C:/Videos/movie.mkv"), ("font", "C:/Windows/Fonts/arial.ttf"), ("font_bold", "C:/Windows/Fonts/arialbd.ttf"), ("font_italic", "C:/Windows/Fonts/ariali.ttf"), ("font_bolditalic", "C:/Windows/Fonts/arialbi.ttf"), ("duration", "180")]
         .into_iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect();
@@ -255,7 +294,7 @@ fn command_text(form: &Effect, filters: &Filters, values: &Values) -> String {
 }
 
 #[component]
-fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHandler<Values>, named: Named, text: FormText, on_browse: EventHandler<BrowseRequest>) -> Element {
+fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHandler<Values>, named: Named, text: FormText, on_browse: EventHandler<BrowseRequest>, compact: bool, mixed: bool, on_touch: EventHandler<String>) -> Element {
     let c = control;
     let id = c.id.clone();
     // an EventHandler is Copy, so every field closure below can hold it
@@ -265,6 +304,7 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
         move |v: V| {
             let mut next = values.clone();
             next.insert(id.clone(), v);
+            on_touch.call(id.clone());
             on_change.call(next);
         }
     });
@@ -278,25 +318,33 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
                 Some(v) => next.insert(id.clone(), v.clone()),
                 None => next.remove(&id),
             };
+            on_touch.call(id.clone());
             on_change.call(next);
         }
     });
-    let current = values.get(&c.id);
-    let at_start = value_text(current) == value_text(start.as_ref());
+    // a mixed control holds no value of its own to show
+    let current = if mixed { None } else { values.get(&c.id) };
+    let at_start = !mixed && value_text(current) == value_text(start.as_ref());
+    // a checkbox's third state is a property, not an attribute: set from here
+    use_effect(use_reactive!(|mixed| {
+        let _ = mixed;
+        let _ = document::eval("document.querySelectorAll('input[data-mixed]').forEach(e => { e.indeterminate = e.dataset.mixed === 'true'; });");
+    }));
     let shown = value_text(current);
     let star = if c.required { " *" } else { "" };
     let label = format!("{}{star}", c.label);
     let help = c.help.clone().filter(|h| !h.is_empty());
     rsx! {
-        div { class: "dlg-field",
-            label { class: "dlg-field-label", "{label}" }
-            div { class: "effect-ctl",
+        div { class: if compact { "uis-fld-labelled compact" } else { "uis-fld-labelled" },
+            label { class: "uis-fld-labelled-label", title: if compact { help.clone().unwrap_or_default() } else { String::new() }, "{label}" }
+            div { class: if compact { "effect-ctl uis-fld-labelled-ctl" } else { "effect-ctl" },
                 match c.control.as_str() {
-                    "list" => rsx! { ListField { choices: c.choices.clone(), value: shown.clone(), on_pick: set } },
+                    "list" => rsx! { ListField { choices: c.choices.clone(), value: shown.clone(), mixed, on_pick: set } },
                     "switch" => rsx! {
                         input {
                             r#type: "checkbox",
                             checked: is_on(current),
+                            "data-mixed": "{mixed}",
                             onchange: move |e| set.call(V::Bool(e.checked())),
                         }
                     },
@@ -312,7 +360,7 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
                         let dl = format!("dl-{}", c.id);
                         rsx! {
                             input {
-                                class: "input",
+                                class: "uis-txt",
                                 r#type: "text",
                                 list: "{dl}",
                                 value: "{shown}",
@@ -340,14 +388,14 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
                         };
                         rsx! {
                             input {
-                                class: "input",
+                                class: "uis-txt",
                                 r#type: "text",
                                 value: "{shown}",
                                 placeholder: "{hold}",
                                 oninput: move |e| set.call(V::Str(e.value())),
                             }
                             button {
-                                class: "btn",
+                                class: "uis-btn",
                                 r#type: "button",
                                 onclick: move |_| on_browse.call(BrowseRequest { id: id.clone(), kind: kind.clone() }),
                                 "{text.browse}"
@@ -365,7 +413,7 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
                         };
                         rsx! {
                             input {
-                                class: "input",
+                                class: "uis-txt",
                                 r#type: "text",
                                 inputmode: "decimal",
                                 value: "{shown}",
@@ -376,7 +424,7 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
                         }
                     }
                     "colour" => rsx! {
-                        ColorPicker {
+                        UisPkrColor {
                             color: colour_hex(&shown),
                             on_change: move |hex: String| set.call(V::Str(hex)),
                             cancel_label: text.cancel.clone(),
@@ -384,7 +432,7 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
                             pick_title: text.pick_colour.clone(),
                         }
                         input {
-                            class: "input",
+                            class: "uis-txt",
                             r#type: "text",
                             value: "{shown}",
                             placeholder: "{text.placeholder_colour}",
@@ -393,11 +441,11 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
                     },
                     "text" if c.soft.is_some() => rsx! { ExpressionRow { control: c.clone(), value: shown.clone(), on_pick: set } },
                     _ => rsx! {
-                        input { class: "input", r#type: "text", value: "{shown}", oninput: move |e| set.call(V::Str(e.value())) }
+                        input { class: "uis-txt", r#type: "text", value: "{shown}", oninput: move |e| set.call(V::Str(e.value())) }
                     },
                 }
                 button {
-                    class: "btn icon fx-reset",
+                    class: "uis-btn ico fx-reset",
                     r#type: "button",
                     title: "{text.reset}",
                     disabled: at_start,
@@ -405,18 +453,18 @@ fn Field(control: Control, start: Option<V>, values: Values, on_change: EventHan
                     Icon { width: 12, height: 12, icon: LdRotateCcw }
                 }
             }
-            if let Some(h) = help {
-                p { class: "hint", "{h}" }
+            if let (Some(h), false) = (help.as_ref(), compact) {
+                p { class: "uis-hnt", "{h}" }
             }
         }
     }
 }
 
 #[component]
-fn ListField(choices: Vec<Choice>, value: String, on_pick: EventHandler<V>) -> Element {
+fn ListField(choices: Vec<Choice>, value: String, mixed: bool, on_pick: EventHandler<V>) -> Element {
     rsx! {
         select {
-            class: "select",
+            class: "uis-ddn-std",
             value: "{value}",
             onchange: {
                 let choices = choices.clone();
@@ -427,8 +475,11 @@ fn ListField(choices: Vec<Choice>, value: String, on_pick: EventHandler<V>) -> E
                     }
                 }
             },
+            if mixed {
+                option { value: "", selected: true, disabled: true, hidden: true }
+            }
             for c in choices.iter() {
-                option { value: "{c.value.js_string()}", selected: c.value.js_string() == value, "{c.label}" }
+                option { value: "{c.value.js_string()}", selected: !mixed && c.value.js_string() == value, "{c.label}" }
             }
         }
     }
@@ -481,12 +532,17 @@ fn NumberRow(control: Control, value: Option<f64>, on_pick: EventHandler<V>) -> 
                 },
             }
         }
-        NumberInput {
+        UisNum {
             value,
             min: c.min,
             max: c.max,
             step,
             decimals,
+            // press and drag sideways to change it, as the colour panel's numbers do: a drag of 250 px spans the range (one step a pixel where there is none)
+            scrub: match (lo, hi) {
+                (Some(lo), Some(hi)) if hi > lo => ((hi - lo) / 250.0).max(step / 10.0),
+                _ => step,
+            },
             allow_empty: true,
             on_change: move |n: Option<f64>| on_pick.call(n.map(V::Num).unwrap_or_else(|| V::Str(String::new()))),
         }
@@ -516,7 +572,7 @@ fn ExpressionRow(control: Control, value: String, on_pick: EventHandler<V>) -> E
                 }
             },
         }
-        input { class: "input", r#type: "text", value: "{value}", oninput: move |e| on_pick.call(V::Str(e.value())) }
+        input { class: "uis-txt", r#type: "text", value: "{value}", oninput: move |e| on_pick.call(V::Str(e.value())) }
     }
 }
 
@@ -525,7 +581,7 @@ fn SizeRow(value: String, named: Named, text: FormText, on_pick: EventHandler<V>
     // a size ffmpeg writes some other way is shown as plain text, as the pages do
     let Some((w0, h0)) = size_parts(&named, &value) else {
         return rsx! {
-            input { class: "input", r#type: "text", value: "{value}", oninput: move |e| on_pick.call(V::Str(e.value())) }
+            input { class: "uis-txt", r#type: "text", value: "{value}", oninput: move |e| on_pick.call(V::Str(e.value())) }
         };
     };
     let mut w = use_signal(|| w0.clone());
@@ -538,7 +594,7 @@ fn SizeRow(value: String, named: Named, text: FormText, on_pick: EventHandler<V>
     let emit = move |w: String, h: String| on_pick.call(V::Str(if !w.is_empty() && !h.is_empty() { format!("{w}x{h}") } else { String::new() }));
     rsx! {
         input {
-            class: "input sz",
+            class: "uis-txt sz",
             r#type: "number",
             min: "0",
             value: "{w}",
@@ -549,7 +605,7 @@ fn SizeRow(value: String, named: Named, text: FormText, on_pick: EventHandler<V>
         }
         span { class: "unit", "×" }
         input {
-            class: "input sz",
+            class: "uis-txt sz",
             r#type: "number",
             min: "0",
             value: "{h}",
@@ -559,7 +615,7 @@ fn SizeRow(value: String, named: Named, text: FormText, on_pick: EventHandler<V>
             },
         }
         select {
-            class: "select szp",
+            class: "uis-ddn-std szp",
             value: "",
             onchange: move |e| {
                 let v = e.value();
@@ -577,19 +633,19 @@ fn SizeRow(value: String, named: Named, text: FormText, on_pick: EventHandler<V>
 
 #[component]
 fn ListedText(id: String, value: String, named: Named, on_pick: EventHandler<V>) -> Element {
-    let dl = format!("dl-{id}");
+    let typed = value.to_lowercase();
+    let names: Vec<String> = named.list(&id).iter().filter(|k| k.to_lowercase().contains(&typed)).cloned().collect();
+    let items: Vec<UisComboItem> = names.iter().map(|k| UisComboItem { key: k.clone(), label: k.clone(), active: *k == value, header: false }).collect();
     rsx! {
-        input {
-            class: "input",
-            r#type: "text",
-            list: "{dl}",
-            value: "{value}",
-            oninput: move |e| on_pick.call(V::Str(e.value())),
-        }
-        datalist { id: "{dl}",
-            for k in named.list(&id).iter() {
-                option { value: "{k}" }
-            }
+        UisCboStandard {
+            value: value.clone(),
+            on_change: move |t: String| on_pick.call(V::Str(t)),
+            items,
+            on_pick: move |i: usize| {
+                if let Some(k) = names.get(i) {
+                    on_pick.call(V::Str(k.clone()));
+                }
+            },
         }
     }
 }
@@ -663,7 +719,8 @@ mod tests {
     fn a_colour_starts_the_picker_at_its_hex() {
         assert_eq!(colour_hex("#FF8800"), "#ff8800");
         assert_eq!(colour_hex("0x00ff00@0.5"), "#00ff00");
-        assert_eq!(colour_hex("red"), "#000000");
+        assert_eq!(colour_hex("Yellow"), "#ffff00");
+        assert_eq!(colour_hex("not-a-colour"), "#000000");
     }
 
     #[test]

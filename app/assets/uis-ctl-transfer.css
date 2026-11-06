@@ -1,0 +1,21 @@
+/* uis-ctl-transfer.css — the Transfer-curve control (lib/uis-ctl-transfer.jsx)
+   ═══════════════════════════════════════════════════════════════════════════
+   An OPTIONAL control's skin, so it is its own file: the sync copies a catalog
+   CSS into an app only when that app uses it. It rides with the component by
+   STEM, and the jsx side-effect-imports it.
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Transfer — a level-in / level-out graph (uis-ctl-transfer.jsx) on a plot panel that follows the theme (--uis-plot-*);
+   its size is the component's inline width / height, because the pointer is read against it. */
+.uis-trf {
+  position: relative; flex: 0 0 auto; background: var(--uis-plot-bg); border-radius: 6px;
+  cursor: crosshair; touch-action: none; user-select: none; overflow: hidden;
+}
+.uis-trf-svg { position: absolute; inset: 0; pointer-events: none; }
+.uis-trf-grid { stroke: var(--uis-plot-grid); stroke-width: 1; }
+.uis-trf-diag { stroke: var(--uis-plot-guide); stroke-width: 1; }
+.uis-trf-curve { stroke: var(--uis-plot-line); stroke-width: 1.8; }
+.uis-trf-dot { fill: var(--uis-plot-line); stroke: var(--uis-plot-dot-ring); stroke-width: 1.2; }

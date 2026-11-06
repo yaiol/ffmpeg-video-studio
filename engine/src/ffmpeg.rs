@@ -8,6 +8,7 @@ use crate::{
     effects::{self, Filter, Look},
     metadata::{Meta, Outputs, SourceTags, StreamKind, StreamTags},
     preset::{Container, Preset, RateMode, Speed, VideoCodec},
+    sound_plan::SoundPlan,
 };
 use std::{
     ffi::OsString,
@@ -47,6 +48,12 @@ pub fn is_nonfree(ffmpeg: &Path) -> Option<bool> {
         return None;
     }
     Some(String::from_utf8_lossy(&out.stdout).contains("--enable-nonfree"))
+}
+
+/// The first line of ffmpeg's `-version` (its version and build), for the log; empty when the program does not answer.
+pub fn version_line(ffmpeg: &Path) -> String {
+    let Ok(out) = command(ffmpeg).arg("-version").stdin(Stdio::null()).output() else { return String::new() };
+    String::from_utf8_lossy(&out.stdout).lines().next().unwrap_or("").trim().to_owned()
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -364,11 +371,29 @@ fn video_args(preset: &Preset, filter: &Filter, args: &mut Vec<OsString>) {
 
 /// The full argument list for one conversion. `normalized` is applied here, so a hand-edited
 /// settings file can never produce a combination the container refuses.
-pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, audio: Resolved, meta: &Meta) -> Vec<OsString> {
+///
+/// `sound` is what the sound's effects made of this file once it was measured (`sound_plan::measure`; `SoundPlan::none()` = nothing measured):
+/// the part that is kept, the speed, the silence added, the chain and the tags. The picture follows the cut, the speed and the extra seconds.
+pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, audio: Resolved, meta: &Meta, sound: &SoundPlan) -> Vec<OsString> {
     let preset = preset.clone().normalized();
     // A copied stream can be neither recoloured, turned, rescaled nor overlaid.
     let copied = preset.video == VideoCodec::Copy;
-    let plan = if copied { effects::Plan::none() } else { effects::plan(look, input) };
+    // (the sound's own effects still apply to the sound of a copied picture: they leave the picture alone)
+    let plan = if copied {
+        let sound = look.effects.sound_only();
+        effects::Plan { audio: effects::plan(&Look { size: look.size, effects: &sound, duration_s: look.duration_s, trim: look.trim }, input).audio, ..effects::Plan::none() }
+    } else {
+        effects::plan(look, input)
+    };
+    // The cut: the user's, narrowed to the part the sound's effects keep.
+    let trim = sound.trim(look.trim);
+    // A copied picture cannot follow a change of speed or length; the caller left those out of its plan.
+    let kept_s = sound.window.map_or(look.duration_s, |(from, to)| to - from);
+    let time = if copied { Vec::new() } else { sound.picture_filters(kept_s) };
+    let mut plan = plan;
+    if !time.is_empty() {
+        plan.filter = crate::sound_plan::then(plan.filter, &time.join(","));
+    }
     // Burned-in subtitles replace the subtitle track: the output carries no other.
     let burned = !copied && plan.burns;
     let mut args: Vec<OsString> = Vec::new();
@@ -376,7 +401,7 @@ pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, aud
     push(&["-hide_banner", "-nostdin", "-y", "-progress", "pipe:1", "-nostats"]);
     // The start of a cut is given before the input (a fast seek) - unless the subtitles are burned in:
     // their filter reads the file on the source's own timeline, so the cut is made after the input there.
-    let start = look.trim.start_s.map(|s| format!("{s:.3}"));
+    let start = trim.start_s.map(|s| format!("{s:.3}"));
     if let Some(start) = start.as_deref().filter(|_| !burned) {
         push(&["-ss", start]);
     }
@@ -393,10 +418,11 @@ pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, aud
     if let Some(start) = start.as_deref().filter(|_| burned) {
         push(&["-ss", start]);
     }
-    if let Some(length) = look.trim.length_s() {
+    // (what the output lasts: the sound's own length when the effects change it, else what the cut leaves)
+    if let Some(length) = sound.expected_s.or_else(|| trim.length_s()) {
         push(&["-t", &format!("{length:.3}")]);
     }
-    if copied && !look.trim.is_none() {
+    if copied && !trim.is_none() {
         push(&["-avoid_negative_ts", "make_zero"]);
     }
     // The video is the first input's first video stream, or what the filter graph produces.
@@ -416,6 +442,10 @@ pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, aud
     // it works on a copied video too).
     let outputs = Outputs { audio: audio.mode != Audio::None, subtitles: preset.container == Container::Mkv && !burned };
     args.extend(meta.cleanup.arguments(meta.source, outputs).into_iter().map(OsString::from));
+    // The tags the effects write describe the output, so they come after the cleaning and no cleaning removes them.
+    for (key, value) in &sound.tags {
+        args.extend(["-metadata".into(), format!("{key}={value}").into()]);
+    }
 
     video_args(&preset, &plan.filter, &mut args);
 
@@ -428,28 +458,16 @@ pub fn build_args(input: &Path, output: &Path, preset: &Preset, look: &Look, aud
         Audio::Ac3 => push(&["-c:a", "ac3", "-b:a", &format!("{}k", audio.kbps)]),
         Audio::Pcm => push(&["-c:a", "pcm_s16le"]),
     }
-    // Mixing down is asked of a mode that re-encodes: a copy cannot change the channels.
-    if let Some(n) = audio.channels.filter(|_| audio.mode.encodes()) {
-        push(&["-ac", &n.to_string()]);
-    }
-    // The sound's own filters: its level and loudness (of any mode that re-encodes), then the effect that
-    // plays it backwards (which only applies when the video is not just copied). ffmpeg refuses a filter
-    // with a copy, which is why the caller never leaves a copy where one is asked.
+    // The sound's own filters are the effects that act on it (the Effects Audio list, the reversal), in the order listed. ffmpeg refuses a
+    // filter with a copy, which is why the caller never leaves a copy where one is asked.
     if audio.mode.encodes() {
-        let mut filters: Vec<String> = Vec::new();
-        if audio.gain_db != 0 {
-            filters.push(format!("volume={}dB", audio.gain_db));
-        }
-        if audio.loudness {
-            filters.push("loudnorm=I=-16:TP=-1.5:LRA=11".to_owned());
-        }
-        filters.extend(plan.audio.clone());
-        if !filters.is_empty() {
-            push(&["-af", &filters.join(",")]);
+        if let Some(chain) = sound.chain.as_deref().or(plan.audio.as_deref()).filter(|c| !c.is_empty()) {
+            push(&["-af", chain]);
         }
     }
     if preset.container == Container::Mp4 || preset.container == Container::Mov {
-        push(&["-movflags", "+faststart"]);
+        // (an MP4 keeps a tag it has no atom for only with `use_metadata_tags`: the ReplayGain ones)
+        push(&["-movflags", if sound.tags.is_empty() { "+faststart" } else { "+faststart+use_metadata_tags" }]);
     }
     args.push(output.into());
     args
@@ -500,7 +518,7 @@ mod tests {
     fn args_look(preset: &Preset, size: &Size, audio: Resolved, effects: &EffectsEntry) -> String {
         let look = Look { size, effects, duration_s: 100.0, trim: crate::trim::Trim::none() };
         let (cleanup, source) = (MetadataCleanup::keep(), SourceTags::default());
-        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, audio, &Meta { cleanup: &cleanup, source: &source })
+        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, audio, &Meta { cleanup: &cleanup, source: &source }, &SoundPlan::none())
             .iter()
             .map(|a| a.to_string_lossy().into_owned())
             .collect::<Vec<_>>()
@@ -508,7 +526,7 @@ mod tests {
     }
 
     fn args_of(preset: &Preset, size: &Size) -> String {
-        args_with(preset, size, Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false })
+        args_with(preset, size, Resolved { mode: Audio::Aac, kbps: 128 })
     }
 
     #[test]
@@ -545,12 +563,12 @@ mod tests {
         let mut p = Preset::new("t");
         p.container = Container::Mov;
         p.video = VideoCodec::ProRes;
-        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Pcm, kbps: 0, channels: None, gain_db: 0, loudness: false });
+        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Pcm, kbps: 0 });
         assert!(a.contains("-c:v prores_ks -profile:v standard -vendor:v ap10 -pix_fmt yuv422p10le"), "{a}");
         assert!(a.contains("-c:a pcm_s16le"), "{a}");
         assert!(!a.contains("-crf") && !a.contains("-preset"), "{a}");
         p.prores = ProResProfile::Fourk;
-        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Pcm, kbps: 0, channels: None, gain_db: 0, loudness: false });
+        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Pcm, kbps: 0 });
         assert!(a.contains("-profile:v 4444") && a.contains("yuv444p10le"), "{a}");
     }
 
@@ -559,7 +577,7 @@ mod tests {
         let p = Preset::new("t");
         let lut = entry(vec![Item::with("try:lut3d", &[("file", "D:\\Luts\\hlg.cube")])]);
         let size = Size { max_height: Some(720), ..Size::new("s") };
-        let audio = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
+        let audio = Resolved { mode: Audio::Aac, kbps: 128 };
         let a = args_look(&p, &size, audio, &lut);
         let at = a.find("-vf lut3d=").expect(&a);
         assert!(a[at..].contains("hlg.cube") && a[at..].contains(",scale="), "{a}");
@@ -662,7 +680,7 @@ mod tests {
     #[test]
     fn a_turn_is_a_plain_filter_and_a_copied_stream_takes_none() {
         let p = Preset::new("t");
-        let audio = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
+        let audio = Resolved { mode: Audio::Aac, kbps: 128 };
         let turn = entry(vec![Item::with("turn", &[("way", "cw")])]);
         let a = args_look(&p, &Size::original(), audio, &turn);
         assert!(a.contains("-vf transpose=dir=clock") && a.contains("-map 0:v:0") && !a.contains("filter_complex"), "{a}");
@@ -674,7 +692,7 @@ mod tests {
     #[test]
     fn a_watermark_adds_its_picture_as_a_second_input_and_maps_the_graph() {
         let p = Preset::new("t");
-        let audio = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
+        let audio = Resolved { mode: Audio::Aac, kbps: 128 };
         let wm = entry(vec![Item::with("watermark", &[("file", "D:\\logo.png")])]);
         let a = args_look(&p, &Size::original(), audio, &wm);
         assert!(a.contains("-i in.mkv -i D:\\logo.png "), "{a}");
@@ -690,7 +708,7 @@ mod tests {
     fn playing_backwards_filters_the_sound_too_and_burning_drops_the_subtitle_track() {
         let mut p = Preset::new("t");
         p.container = Container::Mkv;
-        let audio = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
+        let audio = Resolved { mode: Audio::Aac, kbps: 128 };
         let fx = |key: &str| entry(vec![Item::new(key)]);
         let plain = args_look(&p, &Size::original(), audio, &EffectsEntry::none());
         assert!(plain.contains("-map 0:s? -c:s copy") && !plain.contains("-af"), "{plain}");
@@ -699,7 +717,7 @@ mod tests {
         let burned = args_look(&p, &Size::original(), audio, &fx("burn-subtitles"));
         assert!(!burned.contains("-map 0:s?") && burned.contains("-vf subtitles=filename="), "{burned}");
         // With the sound copied or absent there is nothing to filter.
-        let copy_sound = Resolved { mode: Audio::Copy, kbps: 0, channels: None, gain_db: 0, loudness: false };
+        let copy_sound = Resolved { mode: Audio::Copy, kbps: 0 };
         assert!(!args_look(&p, &Size::original(), copy_sound, &fx("play-backwards")).contains("-af"));
     }
 
@@ -707,7 +725,7 @@ mod tests {
         let size = Size::original();
         let look = Look { size: &size, effects, duration_s: 100.0, trim };
         let (cleanup, source) = (MetadataCleanup::keep(), SourceTags::default());
-        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false }, &Meta { cleanup: &cleanup, source: &source })
+        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, Resolved { mode: Audio::Aac, kbps: 128 }, &Meta { cleanup: &cleanup, source: &source }, &SoundPlan::none())
             .iter()
             .map(|a| a.to_string_lossy().into_owned())
             .collect()
@@ -752,8 +770,8 @@ mod tests {
     fn args_meta(preset: &Preset, cleanup: &MetadataCleanup, source: &SourceTags) -> String {
         let (size, effects) = (Size::original(), EffectsEntry::none());
         let look = Look { size: &size, effects: &effects, duration_s: 100.0, trim: crate::trim::Trim::none() };
-        let audio = Resolved { mode: Audio::Copy, kbps: 0, channels: None, gain_db: 0, loudness: false };
-        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, audio, &Meta { cleanup, source })
+        let audio = Resolved { mode: Audio::Copy, kbps: 0 };
+        build_args(Path::new("in.mkv"), Path::new("out.mp4"), preset, &look, audio, &Meta { cleanup, source }, &SoundPlan::none())
             .iter()
             .map(|a| a.to_string_lossy().into_owned())
             .collect::<Vec<_>>()
@@ -823,13 +841,10 @@ mod tests {
     }
 
     #[test]
-    fn ac3_and_the_channel_mix_reach_the_command_line() {
+    fn ac3_reaches_the_command_line() {
         let p = Preset::new("t");
-        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Ac3, kbps: 256, channels: Some(2), gain_db: 0, loudness: false });
-        assert!(a.contains("-c:a ac3 -b:a 256k") && a.contains("-ac 2"), "{a}");
-        // A copy cannot be mixed down, so the count is not passed.
-        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Copy, kbps: 0, channels: Some(2), gain_db: 0, loudness: false });
-        assert!(!a.contains("-ac"), "{a}");
+        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Ac3, kbps: 256 });
+        assert!(a.contains("-c:a ac3 -b:a 256k") && !a.contains("-ac"), "{a}");
     }
 
     #[test]
@@ -846,36 +861,40 @@ mod tests {
         let mut p = Preset::new("t");
         p.video = VideoCodec::Copy;
         let lut = entry(vec![Item::with("try:lut3d", &[("file", "x.cube")])]);
-        let a = args_look(&p, &Size::original(), Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false }, &lut);
+        let a = args_look(&p, &Size::original(), Resolved { mode: Audio::Aac, kbps: 128 }, &lut);
         assert!(!a.contains("lut3d"), "{a}");
     }
 
     #[test]
-    fn the_level_and_the_loudness_become_audio_filters_before_the_reversal() {
+    fn the_sound_effects_become_audio_filters_in_the_order_listed() {
         let p = Preset::new("t");
-        let loud = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: -3, loudness: true };
-        let a = args_with(&p, &Size::original(), loud);
-        assert!(a.contains("-af volume=-3dB,loudnorm=I=-16:TP=-1.5:LRA=11"), "{a}");
+        let loud = Resolved { mode: Audio::Aac, kbps: 128 };
+        let list = entry(vec![Item::with("try:volume", &[("volume", "-3dB")]), Item::with("try:loudnorm", &[("I", "-16"), ("TP", "-1.5"), ("LRA", "11")]), Item::new("play-backwards")]);
+        let a = args_look(&p, &Size::original(), loud, &list);
+        assert!(a.contains("-af volume=volume=-3dB,loudnorm=") && a.contains("I=-16") && a.contains("TP=-1.5") && a.contains("LRA=11") && a.contains(",areverse"), "{a}");
         let back = entry(vec![Item::new("play-backwards")]);
         let a = args_look(&p, &Size::original(), loud, &back);
-        assert!(a.contains("-af volume=-3dB,loudnorm=I=-16:TP=-1.5:LRA=11,areverse"), "{a}");
+        assert!(a.contains("-af areverse"), "{a}");
         // The sound's own filters work with a copied VIDEO, the reversal does not.
         let mut copy = Preset::new("c");
         copy.video = VideoCodec::Copy;
-        let a = args_look(&copy, &Size::original(), loud, &back);
-        assert!(a.contains("-af volume=-3dB,loudnorm=I=-16:TP=-1.5:LRA=11 ") && !a.contains("areverse"), "{a}");
-        let flat = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
+        let level = entry(vec![Item::with("try:volume", &[("volume", "-3dB")])]);
+        let a = args_look(&copy, &Size::original(), loud, &level);
+        assert!(a.contains("-af volume=volume=-3dB "), "{a}");
+        let a = args_look(&copy, &Size::original(), loud, &list);
+        assert!(!a.contains("areverse"), "{a}");
+        let flat = Resolved { mode: Audio::Aac, kbps: 128 };
         assert!(!args_with(&p, &Size::original(), flat).contains("-af"));
     }
 
     #[test]
     fn the_audio_decision_decides_the_audio_arguments() {
         let p = Preset::new("t");
-        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Opus, kbps: 96, channels: None, gain_db: 0, loudness: false });
+        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Opus, kbps: 96 });
         assert!(a.contains("-map 0:a? ") && a.contains("-c:a libopus -b:a 96k"), "{a}");
-        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Copy, kbps: 0, channels: None, gain_db: 0, loudness: false });
+        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::Copy, kbps: 0 });
         assert!(a.contains("-c:a copy") && !a.contains("-b:a"), "{a}");
-        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::None, kbps: 0, channels: None, gain_db: 0, loudness: false });
+        let a = args_with(&p, &Size::original(), Resolved { mode: Audio::None, kbps: 0 });
         assert!(a.contains("-an") && !a.contains("0:a?"), "{a}");
     }
 

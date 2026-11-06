@@ -76,17 +76,11 @@ pub struct AudioEntry {
     pub name: String,
     pub mode: Audio,
     pub kbps: u32,
-    /// Mix the sound down to this many channels (1 = mono, 2 = stereo); None keeps the source's.
-    pub channels: Option<u8>,
-    /// Louder or quieter by this many decibels; 0 leaves the level.
-    pub gain_db: i32,
-    /// Bring the sound to a standard loudness (EBU R128, -16 LUFS), whatever the source's level.
-    pub loudness: bool,
 }
 
 impl Default for AudioEntry {
     fn default() -> Self {
-        AudioEntry { id: String::new(), name: String::new(), mode: Audio::Aac, kbps: 192, channels: None, gain_db: 0, loudness: false }
+        AudioEntry { id: String::new(), name: String::new(), mode: Audio::Aac, kbps: 192 }
     }
 }
 
@@ -113,8 +107,6 @@ impl AudioEntry {
             self.mode = Audio::Aac;
         }
         self.kbps = self.kbps.clamp(32, 512);
-        self.channels = self.channels.filter(|n| matches!(n, 1 | 2));
-        self.gain_db = self.gain_db.clamp(-30, 30);
         self
     }
 
@@ -129,11 +121,6 @@ impl AudioEntry {
 pub struct Resolved {
     pub mode: Audio,
     pub kbps: u32,
-    /// Only asked of a mode that re-encodes.
-    pub channels: Option<u8>,
-    /// Like the entry's: asked of a mode that re-encodes, and never of a copy.
-    pub gain_db: i32,
-    pub loudness: bool,
 }
 
 /// What a conversion falls back to when the sound cannot be kept: an editing format keeps its sound
@@ -144,7 +131,7 @@ fn fallback(preset: &Preset) -> Resolved {
     } else {
         preset.container.audio_modes()[0]
     };
-    Resolved { mode, kbps: if mode == Audio::Opus { 128 } else { 192 }, channels: None, gain_db: 0, loudness: false }
+    Resolved { mode, kbps: if mode == Audio::Opus { 128 } else { 192 } }
 }
 
 /// Decide what to do with this file's audio. `source_codec` is the probe's first audio stream, empty
@@ -152,7 +139,7 @@ fn fallback(preset: &Preset) -> Resolved {
 pub fn resolve(entry: &AudioEntry, preset: &Preset, source_codec: &str) -> Resolved {
     if source_codec.is_empty() {
         // No sound to keep or convert; asking ffmpeg to copy nothing is harmless.
-        return Resolved { mode: Audio::Copy, kbps: 0, channels: None, gain_db: 0, loudness: false };
+        return Resolved { mode: Audio::Copy, kbps: 0 };
     }
     if entry.is_original() || !entry.available_for(preset) {
         // An editing format wants uncompressed sound whatever the source holds; the rest keep what they can.
@@ -160,17 +147,13 @@ pub fn resolve(entry: &AudioEntry, preset: &Preset, source_codec: &str) -> Resol
             return fallback(preset);
         }
         if preset.container.holds_codec(source_codec) {
-            return Resolved { mode: Audio::Copy, kbps: 0, channels: None, gain_db: 0, loudness: false };
+            return Resolved { mode: Audio::Copy, kbps: 0 };
         }
         return fallback(preset);
     }
-    let encodes = entry.mode.encodes();
     Resolved {
         mode: entry.mode,
         kbps: entry.kbps,
-        channels: entry.channels.filter(|_| encodes),
-        gain_db: if encodes { entry.gain_db } else { 0 },
-        loudness: entry.loudness && encodes,
     }
 }
 
@@ -182,15 +165,13 @@ pub fn reencoded(resolved: Resolved, preset: &Preset, source_codec: &str) -> Res
 
 /// What a fresh install starts with, with stable ids so a saved selection survives.
 pub fn defaults() -> Vec<AudioEntry> {
-    let mk = |id: &str, name: &str, mode: Audio, kbps: u32| AudioEntry { id: format!("default-{id}"), name: name.to_owned(), mode, kbps, channels: None, gain_db: 0, loudness: false };
-    let stereo = |e: AudioEntry| AudioEntry { channels: Some(2), ..e };
+    let mk = |id: &str, name: &str, mode: Audio, kbps: u32| AudioEntry { id: format!("default-{id}"), name: name.to_owned(), mode, kbps };
     vec![
         mk("aac-128", "AAC 128 kbps", Audio::Aac, 128),
         mk("aac-192", "AAC 192 kbps", Audio::Aac, 192),
         mk("aac-256", "AAC 256 kbps", Audio::Aac, 256),
-        stereo(mk("aac-256-stereo", "AAC 256 kbps stereo", Audio::Aac, 256)),
         mk("opus-128", "Opus 128 kbps", Audio::Opus, 128),
-        stereo(mk("ac3-256-stereo", "AC-3 256 kbps stereo", Audio::Ac3, 256)),
+        mk("ac3-256", "AC-3 256 kbps", Audio::Ac3, 256),
         mk("pcm", "PCM 16-bit", Audio::Pcm, 0),
         mk("none", "No audio", Audio::None, 0),
     ]
@@ -217,9 +198,9 @@ mod tests {
     #[test]
     fn original_audio_is_converted_when_the_container_cannot_hold_it() {
         let mp4 = preset(Container::Mp4, VideoCodec::H264);
-        assert_eq!(resolve(&AudioEntry::original(), &mp4, "dts"), Resolved { mode: Audio::Aac, kbps: 192, channels: None, gain_db: 0, loudness: false });
+        assert_eq!(resolve(&AudioEntry::original(), &mp4, "dts"), Resolved { mode: Audio::Aac, kbps: 192 });
         let webm = preset(Container::Webm, VideoCodec::Vp9);
-        assert_eq!(resolve(&AudioEntry::original(), &webm, "aac"), Resolved { mode: Audio::Opus, kbps: 128, channels: None, gain_db: 0, loudness: false });
+        assert_eq!(resolve(&AudioEntry::original(), &webm, "aac"), Resolved { mode: Audio::Opus, kbps: 128 });
         assert_eq!(resolve(&AudioEntry::original(), &webm, "opus").mode, Audio::Copy);
     }
 
@@ -243,18 +224,15 @@ mod tests {
     fn a_chosen_entry_is_applied_as_it_is() {
         let mp4 = preset(Container::Mp4, VideoCodec::H264);
         let aac = AudioEntry { mode: Audio::Aac, kbps: 256, ..AudioEntry::new("aac") };
-        assert_eq!(resolve(&aac, &mp4, "ac3"), Resolved { mode: Audio::Aac, kbps: 256, channels: None, gain_db: 0, loudness: false });
+        assert_eq!(resolve(&aac, &mp4, "ac3"), Resolved { mode: Audio::Aac, kbps: 256 });
     }
 
     #[test]
     fn a_channel_count_is_asked_only_of_a_mode_that_encodes() {
         let mp4 = preset(Container::Mp4, VideoCodec::H264);
-        let ac3 = AudioEntry { mode: Audio::Ac3, kbps: 256, channels: Some(2), ..AudioEntry::new("ac3") };
-        assert_eq!(resolve(&ac3, &mp4, "dts"), Resolved { mode: Audio::Ac3, kbps: 256, channels: Some(2), gain_db: 0, loudness: false });
-        let none = AudioEntry { mode: Audio::None, channels: Some(2), ..AudioEntry::new("none") };
-        assert_eq!(resolve(&none, &mp4, "aac").channels, None);
+        let ac3 = AudioEntry { mode: Audio::Ac3, kbps: 256, ..AudioEntry::new("ac3") };
+        assert_eq!(resolve(&ac3, &mp4, "dts"), Resolved { mode: Audio::Ac3, kbps: 256 });
         // Only mono and stereo are offered; anything else in a settings file is dropped.
-        assert_eq!(AudioEntry { channels: Some(6), ..AudioEntry::new("x") }.normalized().channels, None);
     }
 
     #[test]
@@ -270,9 +248,9 @@ mod tests {
         let mp4 = preset(Container::Mp4, VideoCodec::H264);
         let kept = resolve(&AudioEntry::original(), &mp4, "aac");
         assert_eq!(kept.mode, Audio::Copy);
-        assert_eq!(reencoded(kept, &mp4, "aac"), Resolved { mode: Audio::Aac, kbps: 192, channels: None, gain_db: 0, loudness: false });
+        assert_eq!(reencoded(kept, &mp4, "aac"), Resolved { mode: Audio::Aac, kbps: 192 });
         // A chosen entry stays as it is, and a file with no sound stays asking for nothing.
-        let chosen = Resolved { mode: Audio::Aac, kbps: 128, channels: None, gain_db: 0, loudness: false };
+        let chosen = Resolved { mode: Audio::Aac, kbps: 128 };
         assert_eq!(reencoded(chosen, &mp4, "aac"), chosen);
         assert_eq!(reencoded(kept, &mp4, "").mode, Audio::Copy);
     }
@@ -282,23 +260,8 @@ mod tests {
         let avi = preset(Container::Avi, VideoCodec::Raw);
         assert_eq!(resolve(&AudioEntry::original(), &avi, "mp3").mode, Audio::Copy);
         assert_eq!(resolve(&AudioEntry::original(), &avi, "pcm_s16le").mode, Audio::Copy);
-        assert_eq!(resolve(&AudioEntry::original(), &avi, "aac"), Resolved { mode: Audio::Ac3, kbps: 192, channels: None, gain_db: 0, loudness: false });
+        assert_eq!(resolve(&AudioEntry::original(), &avi, "aac"), Resolved { mode: Audio::Ac3, kbps: 192 });
         assert!(!Container::Avi.audio_modes().contains(&Audio::Opus));
-    }
-
-    #[test]
-    fn the_level_and_the_loudness_are_asked_only_of_a_mode_that_encodes() {
-        let mp4 = preset(Container::Mp4, VideoCodec::H264);
-        let loud = AudioEntry { gain_db: 6, loudness: true, ..AudioEntry::new("loud") };
-        let r = resolve(&loud, &mp4, "ac3");
-        assert_eq!((r.mode, r.gain_db, r.loudness), (Audio::Aac, 6, true));
-        let silent = AudioEntry { mode: Audio::None, gain_db: 6, loudness: true, ..AudioEntry::new("none") };
-        let r = resolve(&silent, &mp4, "ac3");
-        assert_eq!((r.gain_db, r.loudness), (0, false));
-        // The original rule never changes the level.
-        let r = resolve(&AudioEntry::original(), &mp4, "aac");
-        assert_eq!((r.gain_db, r.loudness), (0, false));
-        assert_eq!(AudioEntry { gain_db: 99, ..AudioEntry::new("x") }.normalized().gain_db, 30);
     }
 
     #[test]

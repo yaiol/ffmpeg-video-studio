@@ -1,5 +1,5 @@
 [package]
-name = "video-converter-engine"
+name = "ffmpeg-video-studio-engine"
 version = "0.1.0"
 edition = "2024"
 
@@ -10,8 +10,10 @@ edition = "2024"
 name = "engine"
 
 [dependencies]
+rodio = { version = "0.23.0", default-features = false, features = ["playback"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["float_roundtrip"] }
 sha2 = "0.11.1"
+ttf-parser = { version = "0.25", default-features = false, features = ["std"] }
 ureq = "3.4.2"
 zip = { version = "9.0.5", default-features = false, features = ["deflate"] }

@@ -1,6 +1,6 @@
-// twin: ui-settings.jsx jsx@92a48344142a rsx@d2421823136f
-//! SettingsView — twin of `ui-settings.jsx`: the full-window settings page. Same classes and
-//! element structure (rail + page, `.tabs.vertical`, `.dlg-field`, `.opt-btns`, `.dlg-about`).
+// twin: uis-stg-view.jsx jsx@0812a0854a86 rsx@7f9fbefffbf5
+//! UisStgView — twin of `uis-stg-view.jsx`: the full-window settings page. Same classes and
+//! element structure (rail + page, `.uis-tab-set.vertical`, `.uis-fld-labelled`, `.uis-opt-set`, `.uis-dlg-about`).
 //!
 //! Ported: frame, General (Language + Theme), About, app-supplied `tabs` (+ the page of the active
 //! one), `general_extra` / `about_extra`, the `stg-open` class on <html>.
@@ -32,7 +32,7 @@ static LOGO: LazyLock<String> = LazyLock::new(|| {
 
 /// A tab the APP adds between General and About. `key` is the app's own identifier for it.
 #[derive(Clone, PartialEq)]
-pub struct AppTab {
+pub struct UisAppTab {
     pub key: String,
     pub label: String,
     pub icon: Element,
@@ -43,7 +43,7 @@ static NEXT_VIEW: AtomicU32 = AtomicU32::new(1);
 /// The keyboard half of the page, copied from the JSX's effect: every key event is stopped on <body> - AFTER
 /// the focused control has had it (so typing in a field works), BEFORE the app's own document/window
 /// shortcuts - so no app shortcut can act on the view the page covers. Focus moves into the page and Tab is
-/// kept inside it. Escape leaves the page; while a popup opened from a tab is up (`.pop-surface`, `.dp-pop`:
+/// kept inside it. Escape leaves the page; while a popup opened from a tab is up (`.uis-pop-surface`, `.uis-dat-pop`:
 /// they close on their own document listener) Escape closes that popup instead.
 const KEYS_JS: &str = r#"
 let view = null;
@@ -52,8 +52,8 @@ for (let i = 0; i < 40 && !view; i++) {
   if (!view) await new Promise((r) => setTimeout(r, 25));
 }
 if (view) {
-  view.querySelector('.tab.active')?.focus();
-  const POPUP = '.pop-surface, .dp-pop';
+  view.querySelector('.uis-tab.active')?.focus();
+  const POPUP = '.uis-pop-surface, .uis-dat-pop';
   const focusables = () => [...view.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')]
     .filter((el) => !el.disabled && el.offsetParent !== null);
   const onKey = (e) => {
@@ -87,7 +87,7 @@ const GENERAL: &str = "general";
 const ABOUT: &str = "about";
 
 #[component]
-pub fn SettingsView(
+pub fn UisStgView(
     app_name: String,
     app_version: String,
     lang: String,
@@ -97,7 +97,7 @@ pub fn SettingsView(
     on_close: EventHandler<()>,
     /// Tabs the app adds, shown between General and About.
     #[props(default)]
-    app_tabs: Vec<AppTab>,
+    app_tabs: Vec<UisAppTab>,
     /// The tab to open on: `general`, `about`, or an app tab's key. Empty = General.
     #[props(default)]
     initial_tab: String,
@@ -161,13 +161,13 @@ pub fn SettingsView(
         });
     }
 
-    // While the page is open <html> carries `.stg-open`, which ui-app.css uses to hide the footer
+    // While the page is open <html> carries `.uis-stg-open`, which uis-app.css uses to hide the footer
     // bars and make the rest of the header inert. Removed again when the page unmounts.
     use_hook(|| {
-        let _ = document::eval("document.documentElement.classList.add('stg-open');");
+        let _ = document::eval("document.documentElement.classList.add('uis-stg-open');");
     });
     use_drop(|| {
-        let _ = document::eval("document.documentElement.classList.remove('stg-open');");
+        let _ = document::eval("document.documentElement.classList.remove('uis-stg-open');");
     });
 
     let t = |key: &str| i18n::t(&lang, key);
@@ -181,24 +181,24 @@ pub fn SettingsView(
     let btn_light = t("btnStgGeneralThemeLight");
     let about_desc = t("msgStgAboutDesc");
 
-    let tab_class = |key: &str| if active() == key { "tab active" } else { "tab" };
+    let tab_class = |key: &str| if active() == key { "uis-tab active" } else { "uis-tab" };
     let is_app_tab = app_tabs.iter().any(|t| t.key == active());
-    let opt_class = |key: &str| if theme == key { "opt-btn active" } else { "opt-btn" };
+    let opt_class = |key: &str| if theme == key { "uis-opt active" } else { "uis-opt" };
 
     rsx! {
-        div { id: "{view_id}", class: "stg-view",
-            div { class: "stg-rail pnl",
-                div { class: "stg-head",
+        div { id: "{view_id}", class: "uis-stg-view",
+            div { class: "uis-stg-rail uis-pnl",
+                div { class: "uis-stg-head",
                     button {
-                        class: "btn icon subtle",
+                        class: "uis-btn ico subtle",
                         title: "{tip_back}",
                         "aria-label": "{tip_back}",
                         onclick: move |_| on_close.call(()),
                         Icon { width: 14, height: 14, icon: LdArrowLeft }
                     }
-                    span { class: "dlg-title", "{ttl}" }
+                    span { class: "uis-dlg-title", "{ttl}" }
                 }
-                div { class: "tabs vertical",
+                div { class: "uis-tab-set vertical",
                     button {
                         class: tab_class(GENERAL),
                         onclick: move |_| {
@@ -233,12 +233,12 @@ pub fn SettingsView(
                     }
                 }
             }
-            div { class: "stg-body dlg-form",
-                div { class: "stg-page", hidden: active() != GENERAL,
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", "{lbl_lang}" }
+            div { class: "uis-stg-body uis-dlg-form",
+                div { class: "uis-stg-page", hidden: active() != GENERAL,
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", "{lbl_lang}" }
                         select {
-                            class: "select",
+                            class: "uis-ddn-std",
                             value: "{lang}",
                             onchange: move |e| on_set_lang.call(e.value()),
                             for l in LANGUAGES.iter() {
@@ -246,9 +246,9 @@ pub fn SettingsView(
                             }
                         }
                     }
-                    div { class: "dlg-field divider",
-                        label { class: "dlg-field-label", "{lbl_theme}" }
-                        div { class: "opt-btns",
+                    div { class: "uis-fld-labelled divider",
+                        label { class: "uis-fld-labelled-label", "{lbl_theme}" }
+                        div { class: "uis-opt-set",
                             button {
                                 class: opt_class("dark"),
                                 onclick: move |_| on_set_theme.call("dark".to_owned()),
@@ -269,22 +269,22 @@ pub fn SettingsView(
                 }
                 for (key, page) in app_pages.iter() {
                     if visited().contains(key) {
-                        div { key: "{key}", class: "stg-page stg-page-app", hidden: active() != *key, {page.clone()} }
+                        div { key: "{key}", class: "uis-stg-page stg-page-app", hidden: active() != *key, {page.clone()} }
                     }
                 }
                 if is_app_tab && !app_pages.iter().any(|(k, _)| *k == active()) {
-                    div { class: "stg-page stg-page-app",
+                    div { class: "uis-stg-page stg-page-app",
                         if let Some(page) = app_page {
                             {page}
                         }
                     }
                 }
-                div { class: "stg-page", hidden: active() != ABOUT,
-                    div { class: "dlg-about",
-                        img { class: "dlg-about-logo", src: "{*LOGO}", alt: "yaiol" }
-                        div { class: "dlg-about-text",
-                            div { class: "dlg-about-id", "{app_name} " b { "v{app_version}" } " by yaiol" }
-                            div { class: "dlg-about-desc", "{about_desc}" }
+                div { class: "uis-stg-page", hidden: active() != ABOUT,
+                    div { class: "uis-dlg-about",
+                        img { class: "uis-dlg-about-logo", src: "{*LOGO}", alt: "yaiol" }
+                        div { class: "uis-dlg-about-text",
+                            div { class: "uis-dlg-about-id", "{app_name} " b { "v{app_version}" } " by yaiol" }
+                            div { class: "uis-dlg-about-desc", "{about_desc}" }
                         }
                     }
                     if let Some(extra) = about_extra {

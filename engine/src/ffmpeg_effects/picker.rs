@@ -52,6 +52,8 @@ pub struct Entry {
     pub title: String,
     pub category: String,
     pub level: String,
+    /// The effect is drawn with a widget (its kind) instead of a row of controls.
+    pub widget: Option<String>,
 }
 
 impl Catalog {
@@ -66,8 +68,22 @@ impl Catalog {
     /// The menu of an app that works on `works` (`video` or `audio`), for one system (`windows`, `linux`, `macos` or `any`).
     /// Not sorted: group by `categories`, then by the title the user's language sorts them under.
     pub fn picker(&self, system: &str, works: &str) -> Vec<Entry> {
+        self.picker_for(system, works, false)
+    }
+
+    /// What an effect works on (`video`, `audio` or `both`), for a hand-written effect by its id or a filter as `try:name`.
+    pub fn works_of(&self, key: &str) -> Option<String> {
+        match key.strip_prefix("try:") {
+            Some(name) => self.filters.get(name).map(|f| f.works.clone()),
+            None => self.effects.get(key).map(|e| e.works.clone()),
+        }
+    }
+
+    /// The menu of an app that works on `works`; with `only`, just the effects that work on `works` alone (an app that converts video lists
+    /// the effects that act on the sound only apart from the picture's, and what acts on both stays with the picture).
+    pub fn picker_for(&self, system: &str, works: &str, only: bool) -> Vec<Entry> {
         let version = self.systems.get(system).and_then(|s| s.version.as_deref());
-        let fits = |w: &str| w == works || w == "both";
+        let fits = |w: &str| w == works || (!only && w == "both");
         let shown = |a: Avail| a != Avail::No;
         let mut out = Vec::new();
         for (name, f) in &self.filters {
@@ -76,13 +92,13 @@ impl Catalog {
             }
             let Some(category) = f.category.clone().filter(|c| !c.is_empty()) else { continue };
             if shown(avail(&f.since, &f.until, system, version)) {
-                out.push(Entry { key: format!("try:{name}"), title: f.plain.clone().unwrap_or_else(|| name.clone()), category, level: f.level.clone().unwrap_or_default() });
+                out.push(Entry { key: format!("try:{name}"), title: f.plain.clone().unwrap_or_else(|| name.clone()), category, level: f.level.clone().unwrap_or_default(), widget: None });
             }
         }
         for (id, e) in &self.effects {
             let Some(category) = e.category.clone().filter(|c| !c.is_empty()) else { continue };
             if fits(&e.works) && shown(avail(&e.since, &e.until, system, version)) {
-                out.push(Entry { key: id.clone(), title: e.plain.clone().unwrap_or_else(|| id.clone()), category, level: e.level.clone().unwrap_or_default() });
+                out.push(Entry { key: id.clone(), title: e.plain.clone().unwrap_or_else(|| id.clone()), category, level: e.level.clone().unwrap_or_default(), widget: e.widget.as_ref().map(|w| w.kind.clone()) });
             }
         }
         out

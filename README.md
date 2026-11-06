@@ -1,6 +1,6 @@
-# Video Converter
+# FFmpeg Video Studio
 
-Video Converter is part of [yaiol Applications](https://apps.yaiol.com).
+FFmpeg Video Studio is part of [yaiol Applications](https://apps.yaiol.com).
 
 ## Install
 

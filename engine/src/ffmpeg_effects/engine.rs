@@ -14,7 +14,7 @@ pub type Values = HashMap<String, V>;
 /// What the page or the job knows that the effect may use: `input` (the source file) and `font` (a font file).
 pub type Ctx = HashMap<String, String>;
 
-const CTX: [&str; 4] = ["input", "font", "name", "duration"];
+const CTX: [&str; 7] = ["input", "font", "font_bold", "font_italic", "font_bolditalic", "name", "duration"];
 
 /// A choice of a control as the user sees it.
 #[derive(Debug, Clone, PartialEq)]
@@ -72,12 +72,13 @@ pub fn implicit(name: &str, filters: &Filters) -> Option<Effect> {
         .map(|o| ControlDef { id: o.name.clone(), bind: Some(format!("{name}.{}", o.name)), ..Default::default() })
         .collect();
     let with = Ordered(controls.iter().map(|c| (c.id.clone(), With::Control(c.id.clone()))).collect());
-    let step = Some(vec![Step { filter: Some(name.to_string()), choice: None, with }]);
+    let step = Some(vec![Step { filter: Some(name.to_string()), choice: None, unless: None, with }]);
     let sound = rec.works == "audio";
     Some(Effect {
         implicit: true,
         name: name.to_string(),
         plain: Some(rec.plain.clone().unwrap_or_else(|| name.to_string())),
+        what: rec.what.clone(),
         controls,
         // a filter that works on sound only is the sound's chain, not the picture's
         steps: if sound { None } else { step.clone() },
@@ -553,6 +554,15 @@ fn chain_text(
 ) -> Result<Vec<String>, String> {
     let mut out = Vec::new();
     for s in steps {
+        if let Some(unless) = &s.unless {
+            let mut all = !unless.is_empty();
+            for (id, v) in unless {
+                all = all && get(id).is_ok_and(|g| g.js_string() == V::from_json(v).js_string());
+            }
+            if all {
+                continue;
+            }
+        }
         if let Some(id) = &s.choice {
             let controls = resolve_controls(effect, filters)?;
             let c = controls.iter().find(|x| &x.id == id).ok_or_else(|| format!("{id}: there is no such control"))?;

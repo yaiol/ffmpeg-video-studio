@@ -1,0 +1,41 @@
+/* uis-ctl-yrgb.css — the YRGB four-slider bank (lib/uis-ctl-yrgb.jsx)
+   ═══════════════════════════════════════════════════════════════════════════
+   An OPTIONAL control's skin, so it is its own file: the sync copies a catalog
+   CSS into an app only when that app uses it. It rides with the component by
+   STEM, and the jsx side-effect-imports it.
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* the sliders' travel is --yrgb-size (set by the component); the neutral line runs across the whole bank,
+   through the middle of the slots */
+.uis-yrgb { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; min-width: 0; --yrgb-size: 92px; }
+.uis-yrgb-bars { position: relative; width: 100%; height: var(--yrgb-size); display: flex; justify-content: center; gap: 14px; }
+.uis-yrgb-bars::before { content: ""; position: absolute; left: 0; right: 0; top: calc(var(--yrgb-size) / 2); height: 1px; background: var(--uis-plot-guide); pointer-events: none; }
+/* a flex box has no line box under the input, so a slot is exactly the track's height */
+.uis-yrgb-slot { --c: var(--uis-plot-line); display: flex; height: var(--yrgb-size); }
+.uis-yrgb-range { -webkit-appearance: none; appearance: none; background: transparent; margin: 0; padding: 0; cursor: pointer; writing-mode: vertical-lr; direction: rtl; width: 14px; height: var(--yrgb-size); }
+.uis-yrgb-range::-webkit-slider-runnable-track {
+  width: 14px; height: 100%; border-radius: 6px;
+  background:
+    linear-gradient(to top, transparent var(--a), var(--c) var(--a), var(--c) var(--b), transparent var(--b)),
+    var(--uis-plot-bg);
+}
+.uis-yrgb-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 10px; height: 5px; margin-left: 2px; background: var(--c); border: 1px solid var(--uis-plot-dot-ring); border-radius: 2px; }
+/* the numbers are a row of their own, as wide as the bank, each with its coloured underline; the two rows are NOT aligned column by column */
+.uis-yrgb-reads { display: flex; justify-content: center; gap: 2px; width: 100%; }
+.uis-yrgb-read { --c: var(--uis-plot-line); display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 0 0 38px; width: 38px; min-width: 0; }
+.uis-yrgb-under { width: 100%; height: 3px; border-radius: 2px; background: var(--c); }
+
+/* the wheel view, in the place of the bars: the hue all round, grey in the middle; the dot is drawn over it and never takes the pointer */
+.uis-yrgb-wheel {
+  position: relative; flex: 0 0 auto; width: var(--yrgb-size); height: var(--yrgb-size); border-radius: 50%; cursor: crosshair; touch-action: none; user-select: none; box-shadow: 0 0 0 3px var(--uis-plot-bg);
+  background:
+    radial-gradient(circle closest-side, #6c6f78, rgba(108, 111, 120, 0)),
+    conic-gradient(from 30deg, #e8d23a, #e0443c 60deg, #d43fc0 120deg, #4a64e0 180deg, #3fd0d0 240deg, #3fb560 300deg, #e8d23a 360deg);
+}
+.uis-yrgb-wheel::before, .uis-yrgb-wheel::after { content: ""; position: absolute; background: rgba(255, 255, 255, .3); pointer-events: none; }
+.uis-yrgb-wheel::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.uis-yrgb-wheel::after { top: 50%; left: 0; right: 0; height: 1px; }
+.uis-yrgb-dot { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #fff; border: 1px solid #14151a; box-sizing: border-box; pointer-events: none; }

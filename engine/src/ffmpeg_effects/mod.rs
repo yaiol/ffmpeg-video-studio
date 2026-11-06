@@ -13,6 +13,7 @@
 
 mod compose;
 mod engine;
+pub mod favourites;
 mod expr;
 mod model;
 mod picker;

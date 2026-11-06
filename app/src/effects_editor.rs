@@ -1,14 +1,15 @@
 //! The effects editor, a page of the Settings view: the entries on the left; on the right the name of the selected one and a card for
 //! each effect it holds, in the order they run (drag to move, fold, remove), with a menu that adds one. The same file in the Video
-//! Converter and the Audio Converter, so the two cannot differ: what an app is (`effects::WORKS`, "video" or "audio") is the only thing
+//! Converter and the FFmpeg Audio Studio, so the two cannot differ: what an app is (`effects::WORKS`, "video" or "audio") is the only thing
 //! it says.
 //!
 //! ⚠ SOURCE OF TRUTH: the shared ffmpeg-effects folder (`rust/app`). A copy in an app is never edited there.
-//! It needs, from the app: `crate::settings::Settings` (`effects`, `effects_id`, `lang`, `repaired()`), `crate::i18n`, `crate::manager::reorder`,
-//! `crate::effects_form`, the catalog's `ComboItem` / `Combobox` / `Popover`, and `engine::effects` (`catalog`, `Item`, `EffectsEntry`, `WORKS`).
+//! It needs, from the app: `crate::settings::Settings` (`effects_list`, `effects_list_mut`, `effects_choice`, `effects_choice_mut` - each told whether the
+//! list is the SOUND one: an app with one list ignores it -, `lang`, `repaired()`), `crate::i18n`, `crate::manager::reorder`,
+//! `crate::effects_form`, the catalog's `UisComboItem` / `UisCboStandard` / `UisPopover`, and `engine::effects` (`catalog`, `Item`, `EffectsEntry`, `WORKS`).
 
 use crate::{
-    catalog::{ComboItem, Combobox, Popover},
+    catalog::{UisCboCategory, UisCboFilter, UisComboItem},
     effects_form::{BrowseRequest, CatalogRef, EffectForm, FormText, Named},
     i18n,
     manager::reorder,
@@ -25,9 +26,9 @@ use engine::{
 };
 
 /// Apply `edit` to the effects entry with this id and keep it inside what an entry can be.
-fn edit_effects(mut settings: Signal<Settings>, id: &str, edit: impl FnOnce(&mut EffectsEntry)) {
+fn edit_effects(mut settings: Signal<Settings>, sound: bool, id: &str, edit: impl FnOnce(&mut EffectsEntry)) {
     let mut s = settings.write();
-    if let Some(e) = s.effects.iter_mut().find(|e| e.id == id) {
+    if let Some(e) = s.effects_list_mut(sound).iter_mut().find(|e| e.id == id) {
         edit(e);
         *e = e.clone().normalized();
     }
@@ -79,10 +80,10 @@ fn EffectCard(
                     } else {
                         Icon { width: 14, height: 14, icon: LdChevronRight }
                     }
-                    span { class: "dlg-title", "{label}" }
+                    span { class: "uis-dlg-title", "{label}" }
                 }
                 button {
-                    class: "btn icon",
+                    class: "uis-btn ico",
                     r#type: "button",
                     title: "{remove}",
                     "aria-label": "{remove}",
@@ -98,7 +99,7 @@ fn EffectCard(
 }
 
 /// Every word the effect forms write, in the user's language.
-fn form_text(lang: &str) -> FormText {
+pub fn form_text(lang: &str) -> FormText {
     let t = |key: &str| i18n::t(lang, key);
     FormText {
         nothing: t("msgFxNothingToSet"),
@@ -120,13 +121,13 @@ fn form_text(lang: &str) -> FormText {
 }
 
 /// The names ffmpeg knows for sizes, frame rates and formats, which the forms offer.
-fn named() -> Named {
+pub fn named() -> Named {
     static NAMED: std::sync::OnceLock<Named> = std::sync::OnceLock::new();
     NAMED.get_or_init(|| Named::from_json(include_str!("../../engine/data/ffmpeg-named-values.json")).expect("the shipped names read")).clone()
 }
 
 /// The system the catalogue is asked about (what ffmpeg builds exist for).
-const SYSTEM: &str = if cfg!(windows) {
+pub const SYSTEM: &str = if cfg!(windows) {
     "windows"
 } else if cfg!(target_os = "macos") {
     "macos"
@@ -136,9 +137,34 @@ const SYSTEM: &str = if cfg!(windows) {
 
 /// The "Add an effect" menu: the effects the catalogue offers for what the app converts, under the headings of its categories, each group
 /// alphabetical by title.
-fn menu() -> Vec<(String, String, Vec<(String, String, String)>)> {
+pub fn menu() -> Vec<(String, String, Vec<(String, String, String)>)> {
+    menu_of(false)
+}
+
+/// Every effect the app can list, the ones that act on the sound alone too (the Settings page of the effects listed in the work view): the
+/// two menus under one set of headings, each effect once.
+pub fn menu_all() -> Vec<(String, String, Vec<(String, String, String)>)> {
+    let mut all = menu();
+    for (id, heading, items) in menu_of(true) {
+        match all.iter_mut().find(|(i, _, _)| *i == id) {
+            Some((_, _, own)) => {
+                for item in items {
+                    if !own.iter().any(|o| o.0 == item.0) {
+                        own.push(item);
+                    }
+                }
+                own.sort_by_key(|o| o.1.to_lowercase());
+            }
+            None => all.push((id, heading, items)),
+        }
+    }
+    all
+}
+
+/// The same menu for the list of the effects that act on the sound alone (`sound`), or for the app's own (the picture's, in an app that converts video).
+pub fn menu_of(sound: bool) -> Vec<(String, String, Vec<(String, String, String)>)> {
     let Some(cat) = effects::catalog() else { return Vec::new() };
-    let mut entries = cat.picker(SYSTEM, effects::WORKS);
+    let mut entries = if sound { cat.picker_for(SYSTEM, "audio", true) } else { cat.picker(SYSTEM, effects::WORKS) };
     entries.sort_by_key(|e| e.title.to_lowercase());
     cat.categories
         .iter()
@@ -154,11 +180,12 @@ fn menu() -> Vec<(String, String, Vec<(String, String, String)>)> {
 }
 
 /// The rows of the "Add an effect" list for what was typed, in the chosen category (empty = all of them, each under a heading):
-/// the effects whose title, description or category contains the text, case ignored. Each row is (key, text, is a heading).
-fn menu_rows(query: &str, category: &str) -> Vec<(String, String, bool)> {
+/// the effects whose title, description or category contains the text, case ignored. Each row is (key, text, is a heading). `sound` asks for the
+/// list of the effects that act on the sound alone.
+pub fn menu_rows_of(sound: bool, query: &str, category: &str) -> Vec<(String, String, bool)> {
     let q = query.trim().to_lowercase();
     let mut rows = Vec::new();
-    for (id, heading, items) in menu() {
+    for (id, heading, items) in menu_of(sound) {
         if !category.is_empty() && id != category {
             continue;
         }
@@ -177,7 +204,7 @@ fn menu_rows(query: &str, category: &str) -> Vec<(String, String, bool)> {
 
 /// One effect of the entry: its card and its form, written back to the entry at once.
 #[component]
-fn EffectItem(settings: Signal<Settings>, id: String, lang: String, at: usize, item: Item, open: Signal<Vec<bool>>, drag: Signal<Option<usize>>) -> Element {
+fn EffectItem(settings: Signal<Settings>, sound: bool, id: String, lang: String, at: usize, item: Item, open: Signal<Vec<bool>>, drag: Signal<Option<usize>>) -> Element {
     let t = |key: &str| i18n::t(&lang, key);
     let (id_remove, id_over, id_set, id_browse) = (id.clone(), id.clone(), id.clone(), id.clone());
     let mut open = open;
@@ -200,7 +227,7 @@ fn EffectItem(settings: Signal<Settings>, id: String, lang: String, at: usize, i
                 v[at] = !v[at];
             },
             on_remove: move |_| {
-                edit_effects(settings, &id_remove, |e| {
+                edit_effects(settings, sound, &id_remove, |e| {
                     if at < e.items.len() {
                         e.items.remove(at);
                     }
@@ -216,7 +243,7 @@ fn EffectItem(settings: Signal<Settings>, id: String, lang: String, at: usize, i
                 if from == at {
                     return;
                 }
-                edit_effects(settings, &id_over, |e| {
+                edit_effects(settings, sound, &id_over, |e| {
                     if from < e.items.len() && at < e.items.len() {
                         let moved = e.items.remove(from);
                         e.items.insert(at, moved);
@@ -238,7 +265,7 @@ fn EffectItem(settings: Signal<Settings>, id: String, lang: String, at: usize, i
                 values: item.all_values(),
                 text: form_text(&lang),
                 named: named(),
-                on_change: move |v: Values| edit_effects(settings, &id_set, |e| {
+                on_change: move |v: Values| edit_effects(settings, sound, &id_set, |e| {
                     if let Some(x) = e.items.get_mut(at) {
                         x.set_values(&v);
                     }
@@ -254,7 +281,7 @@ fn EffectItem(settings: Signal<Settings>, id: String, lang: String, at: usize, i
                         if let Some(f) = picked {
                             let mut values = item.all_values();
                             values.insert(req.id.clone(), V::Str(f.path().to_string_lossy().into_owned()));
-                            edit_effects(settings, &id, |e| {
+                            edit_effects(settings, sound, &id, |e| {
                                 if let Some(x) = e.items.get_mut(at) {
                                     x.set_values(&values);
                                 }
@@ -271,12 +298,11 @@ fn EffectItem(settings: Signal<Settings>, id: String, lang: String, at: usize, i
 /// The effects editor, a page of the Settings view: the entries on the left; on the right the name of the
 /// selected one and a card for each effect it holds, in the order they run, with a menu that adds one.
 #[component]
-pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
-    let mut selected = use_signal(|| settings.read().effects_id.clone());
+pub fn EffectsEditor(settings: Signal<Settings>, #[props(default)] sound: bool) -> Element {
+    let mut selected = use_signal(|| settings.read().effects_choice(sound).to_owned());
     let mut dragging = use_signal(|| Option::<String>::None);
     let mut query = use_signal(String::new);
     let mut category = use_signal(String::new);
-    let mut category_open = use_signal(|| false);
     // which cards are open, by position (a card past the end counts as open), and the card being dragged
     let mut open = use_signal(Vec::<bool>::new);
     let mut drag = use_signal(|| Option::<usize>::None);
@@ -284,7 +310,7 @@ pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
     let lang = settings.read().lang.clone();
     let t = |key: &str| i18n::t(&lang, key);
 
-    let entries = settings.read().effects.clone();
+    let entries = settings.read().effects_list(sound).clone();
     let current = entries.iter().find(|e| e.id == selected()).or(entries.first()).cloned();
     let cur_id = current.as_ref().map(|e| e.id.clone()).unwrap_or_default();
 
@@ -302,50 +328,50 @@ pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
 
     rsx! {
         div { class: "manager",
-            div { class: "manager-list",
+            div { class: "manager-list uis-lvw-reorder",
                 div { class: "manager-actions",
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_new}",
                         "aria-label": "{s_new}",
                         onclick: move |_| {
                             let e = EffectsEntry::new(&s_new);
                             selected.set(e.id.clone());
-                            settings.write().effects.push(e);
+                            settings.write().effects_list_mut(sound).push(e);
                         },
                         Icon { width: 14, height: 14, icon: LdPlus }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_dup}",
                         "aria-label": "{s_dup}",
                         disabled: current.is_none(),
                         onclick: move |_| {
-                            let src = settings.read().effects.iter().find(|e| e.id == id_for_dup).cloned();
+                            let src = settings.read().effects_list(sound).iter().find(|e| e.id == id_for_dup).cloned();
                             if let Some(mut e) = src {
                                 e.id = engine::preset::new_id();
                                 e.name = format!("{} 2", e.name);
                                 selected.set(e.id.clone());
-                                settings.write().effects.push(e);
+                                settings.write().effects_list_mut(sound).push(e);
                             }
                         },
                         Icon { width: 14, height: 14, icon: LdCopy }
                     }
                     button {
-                        class: "btn icon",
+                        class: "uis-btn ico",
                         title: "{s_del}",
                         "aria-label": "{s_del}",
                         disabled: current.is_none(),
                         onclick: move |_| {
-                            settings.write().effects.retain(|e| e.id != id_for_del);
+                            settings.write().effects_list_mut(sound).retain(|e| e.id != id_for_del);
                             let fixed = settings.read().clone().repaired();
-                            selected.set(fixed.effects.first().map(|e| e.id.clone()).unwrap_or_default());
+                            selected.set(fixed.effects_list(sound).first().map(|e| e.id.clone()).unwrap_or_default());
                             settings.set(fixed);
                         },
                         Icon { width: 14, height: 14, icon: LdTrash2 }
                     }
                 }
-                div { class: "lv-scroll",
+                div { class: "uis-lvw-scroll",
                     for e in entries.iter() {
                         {
                             let id = e.id.clone();
@@ -357,9 +383,9 @@ pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
                                 button {
                                     key: "{e.id}",
                                     class: match (active, moving) {
-                                        (_, true) => "lv-item reordering",
-                                        (true, _) => "lv-item active",
-                                        _ => "lv-item",
+                                        (_, true) => "uis-lvw-item reordering",
+                                        (true, _) => "uis-lvw-item active",
+                                        _ => "uis-lvw-item",
                                     },
                                     onpointerdown: move |ev| {
                                         if ev.trigger_button() == Some(MouseButton::Primary) {
@@ -372,23 +398,23 @@ pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
                                             dragging.set(None);
                                             return;
                                         }
-                                        reorder(&mut settings.write().effects, |e| e.id.as_str(), &from, &id_over);
+                                        reorder(settings.write().effects_list_mut(sound), |e| e.id.as_str(), &from, &id_over);
                                     },
                                     onpointerup: move |_| dragging.set(None),
                                     onclick: move |_| {
                                         selected.set(id.clone());
                                         open.set(Vec::new());
-                                        settings.write().effects_id = id.clone();
+                                        *settings.write().effects_choice_mut(sound) = id.clone();
                                     },
-                                    div { class: "lv-item-body",
-                                        div { class: "lv-item-name", "{e.name}" }
+                                    div { class: "uis-lvw-item-body",
+                                        div { class: "uis-lvw-item-name", "{e.name}" }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                p { class: "hint", "{s_reorder}" }
+                p { class: "uis-hnt", "{s_reorder}" }
             }
             // The key makes the fields remount when another entry is selected.
             div {
@@ -397,15 +423,15 @@ pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
                 onpointerup: move |_| drag.set(None),
                 onpointerleave: move |_| drag.set(None),
                 if let Some(cur) = &current {
-                    div { class: "dlg-field",
-                        label { class: "dlg-field-label", {t("lblPrsName")} }
+                    div { class: "uis-fld-labelled",
+                        label { class: "uis-fld-labelled-label", {t("lblPrsName")} }
                         div { class: "fx-name-row",
                             input {
-                                class: "input",
+                                class: "uis-txt",
                                 value: "{cur.name}",
                                 oninput: move |ev| {
                                     let v = ev.value();
-                                    edit_effects(settings, &id_for_name, |x| x.name = v);
+                                    edit_effects(settings, sound, &id_for_name, |x| x.name = v);
                                 },
                             }
                             {
@@ -415,7 +441,7 @@ pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
                                 let tip = if any_open { t("tipFxCollapseAll") } else { t("tipFxExpandAll") };
                                 rsx! {
                                     button {
-                                        class: "btn icon",
+                                        class: "uis-btn ico",
                                         r#type: "button",
                                         title: "{tip}",
                                         "aria-label": "{tip}",
@@ -432,81 +458,36 @@ pub fn EffectsEditor(settings: Signal<Settings>) -> Element {
                         }
                     }
                     for (at, item) in cur.items.clone().into_iter().enumerate() {
-                        EffectItem { key: "{at}-{item.key}", settings, id: cur_id.clone(), lang: lang.clone(), at, item, open, drag }
+                        EffectItem { key: "{at}-{item.key}", settings, sound, id: cur_id.clone(), lang: lang.clone(), at, item, open, drag }
                     }
                     if effects::catalog().is_none() {
-                        p { class: "hint", {t("msgFxNoCatalogue")} }
+                        p { class: "uis-hnt", {t("msgFxNoCatalogue")} }
                     }
                     for problem in cur.order_problems() {
-                        p { class: "hint", key: "{problem}", "{problem}" }
+                        p { class: "uis-hnt", key: "{problem}", "{problem}" }
                     }
-                    div { class: "dlg-field",
-                        div { class: "barh-grp fx-add",
-                            {
-                                let menu = menu();
-                                let current_title = menu.iter().find(|(id, _, _)| *id == category()).map(|(_, title, _)| title.clone()).unwrap_or_else(|| s_all.clone());
-                                rsx! {
-                                    button {
-                                        id: "fx-category",
-                                        r#type: "button",
-                                        class: "btn icon",
-                                        title: "{current_title}",
-                                        "aria-label": "{current_title}",
-                                        onclick: move |_| category_open.set(!category_open()),
-                                        Icon { width: 14, height: 14, icon: LdListFilter }
-                                    }
-                                }
-                            }
-                            div { class: "fx-add-combo",
-                                {
-                                    let rows = menu_rows(&query(), &category());
-                                    let items: Vec<ComboItem> = rows.iter().map(|(k, l, header)| ComboItem { key: k.clone(), label: l.clone(), active: false, header: *header }).collect();
-                                    rsx! {
-                                        Combobox {
-                                            value: query(),
-                                            placeholder: s_add.clone(),
-                                            items,
-                                            on_change: move |v: String| query.set(v),
-                                            on_pick: move |i: usize| {
-                                                if let Some((key, _, false)) = menu_rows(&query(), &category()).get(i) {
-                                                    edit_effects(settings, &id_for_add, |x| x.items.push(Item::new(key)));
+                    {
+                        let rows = menu_rows_of(sound, &query(), &category());
+                                    let items: Vec<UisComboItem> = rows.iter().map(|(k, l, header)| UisComboItem { key: k.clone(), label: l.clone(), active: false, header: *header }).collect();
+                        rsx! {
+                            UisCboFilter {
+                                id: "fx-category".to_owned(),
+                                roomy: true,
+                                icon: rsx! { Icon { width: 14, height: 14, icon: LdListFilter } },
+                                all_label: s_all.clone(),
+                                categories: menu_of(sound).into_iter().map(|(id, title, _)| UisCboCategory { id, title, icon: None }).collect::<Vec<_>>(),
+                                category: category(),
+                                on_category: move |c: String| category.set(c),
+                                value: query(),
+                                placeholder: s_add.clone(),
+                                items,
+                                on_change: move |v: String| query.set(v),
+                                on_pick: move |i: usize| {
+                                                if let Some((key, _, false)) = menu_rows_of(sound, &query(), &category()).get(i) {
+                                                    edit_effects(settings, sound, &id_for_add, |x| x.items.push(Item::new(key)));
                                                     query.set(String::new());
                                                 }
                                             },
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // outside the weld: a `.barh-grp > *` rule gives every child the bar's height and no border, which would stretch the panel
-                        {
-                            let menu = menu();
-                            rsx! {
-                                Popover { anchor_id: "fx-category".to_owned(), open: category_open(), on_close: move |_| category_open.set(false),
-                                    button {
-                                        r#type: "button",
-                                        class: if category().is_empty() { "pop-item active" } else { "pop-item" },
-                                        onmousedown: move |ev| {
-                                            ev.prevent_default();
-                                            category.set(String::new());
-                                            category_open.set(false);
-                                        },
-                                        "{s_all}"
-                                    }
-                                    for (id, title, _) in menu {
-                                        button {
-                                            key: "{id}",
-                                            r#type: "button",
-                                            class: if category() == id { "pop-item active" } else { "pop-item" },
-                                            onmousedown: move |ev| {
-                                                ev.prevent_default();
-                                                category.set(id.clone());
-                                                category_open.set(false);
-                                            },
-                                            "{title}"
-                                        }
-                                    }
-                                }
                             }
                         }
                     }

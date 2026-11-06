@@ -1,7 +1,7 @@
-// twin: ui-ctl-combobox.jsx jsx@b2558de4e875 rsx@534ce02f6d95
-//! Combobox — twin of `ui-ctl-combobox.jsx`: the typeahead / autocomplete control. A text field plus a
-//! filtered dropdown list on the shared `Popover`, so the list is never clipped and looks like `Menu`
-//! (they share `.pop-surface` + `.pop-item`).
+// twin: uis-cbo-standard.jsx jsx@587d74d2109b rsx@3f58305866e0
+//! UisCboStandard — twin of `uis-cbo-standard.jsx`: the typeahead / autocomplete control. A text field plus a
+//! filtered dropdown list on the shared `UisPopover`, so the list is never clipped and looks like `UisMenu`
+//! (they share `.uis-pop-surface` + `.uis-pop-item`).
 //!
 //! The control owns the INPUT + open/close + KEYBOARD NAV (up/down move the highlight, Enter picks the
 //! highlighted row); the CONSUMER owns the DATA - it pre-filters `items` by `value` and says how each is
@@ -11,12 +11,12 @@
 //! Controlled input: `value` + `on_change(text)`. Optional `on_open_change(open)` for a consumer that
 //! must show a different value while open. `render_header` adds a fixed top row (e.g. a "clear
 //! selection" row) and is handed the close action. A `header: true` item is a section label
-//! (`.menu-label`): skipped by up/down and never picked.
-//! Differs: behaviour none. Form only: the rows are a `ComboItem` list (key, label, active, header) the consumer
+//! (`.uis-men-label`): skipped by up/down and never picked.
+//! Differs: behaviour none. Form only: the rows are a `UisComboItem` list (key, label, active, header) the consumer
 //! builds, with an optional `render_item` for a custom row body - Rust is typed, so it cannot take the JSX's
 //! free-form `itemKey` / `renderItem` / `itemActive` / `itemHeader` callbacks.
 
-use super::popover::Popover;
+use super::popover::UisPopover;
 use dioxus::prelude::*;
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -24,17 +24,17 @@ static NEXT_ID: AtomicU32 = AtomicU32::new(1);
 
 /// One row. The consumer builds the list; `label` is what the row says.
 #[derive(Clone, PartialEq)]
-pub struct ComboItem {
+pub struct UisComboItem {
     pub key: String,
     pub label: String,
     /// The currently selected row (`.active`).
     pub active: bool,
-    /// A section label: rendered as `.menu-label`, never pickable.
+    /// A section label: rendered as `.uis-men-label`, never pickable.
     pub header: bool,
 }
 
 #[component]
-pub fn Combobox(
+pub fn UisCboStandard(
     value: String,
     on_change: EventHandler<String>,
     #[props(default)] on_focus: Option<EventHandler<()>>,
@@ -43,9 +43,9 @@ pub fn Combobox(
     #[props(default)] on_key_down: Option<EventHandler<KeyboardEvent>>,
     #[props(default)] placeholder: String,
     #[props(default = false)] auto_focus: bool,
-    #[props(default = "input".to_string())] input_class: String,
+    #[props(default = "uis-txt".to_string())] input_class: String,
     #[props(default)] input_style: String,
-    #[props(default)] items: Vec<ComboItem>,
+    #[props(default)] items: Vec<UisComboItem>,
     /// Told the INDEX (into `items`) of the row that was picked.
     #[props(default)] on_pick: Option<EventHandler<usize>>,
     /// A fixed top row; receives the close action.
@@ -103,7 +103,7 @@ pub fn Combobox(
 
     let hi_now = hi();
     let row_class = move |active: bool, i: usize| {
-        let mut c = String::from("pop-item");
+        let mut c = String::from("uis-pop-item");
         if active {
             c.push_str(" active");
         }
@@ -142,7 +142,7 @@ pub fn Combobox(
                     set_open(true);
                 }
             },
-            // Click-away / pick (via Popover) handle close; blur must not race the pick.
+            // Click-away / pick (via UisPopover) handle close; blur must not race the pick.
             onblur: move |_| {
                 if let Some(h) = on_blur {
                     h.call(());
@@ -179,7 +179,7 @@ pub fn Combobox(
                 }
             },
         }
-        Popover {
+        UisPopover {
             anchor_id: id.clone(),
             open: show_list,
             on_close: move |_| close.call(()),
@@ -190,7 +190,7 @@ pub fn Combobox(
             }
             for (i, it) in items.iter().enumerate() {
                 if it.header {
-                    div { key: "{it.key}", class: "menu-label", "{it.label}" }
+                    div { key: "{it.key}", class: "uis-men-label", "{it.label}" }
                 } else {
                     button {
                         key: "{it.key}",

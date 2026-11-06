@@ -1,0 +1,23 @@
+/* uis-ctl-crop-rotate.css — the Crop-and-rotate control (lib/uis-ctl-crop-rotate.jsx)
+   ═══════════════════════════════════════════════════════════════════════════
+   An OPTIONAL control's skin, so it is its own file: the sync copies a catalog
+   CSS into an app only when that app uses it. It rides with the component by
+   STEM, and the jsx side-effect-imports it.
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* the control is laid over a box the picture fills and covers it; only the grips, the rectangle and the turning handle take the pointer */
+.uis-crr { position: absolute; inset: 0; pointer-events: none; container-type: size; }
+/* what is outside the rectangle is dimmed (clipped to the picture, so the bars around it stay as they are) */
+.uis-crr-clip { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.uis-crr-shade { position: absolute; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55); }
+.uis-crr-rect { position: absolute; outline: 1px solid #fff; cursor: move; user-select: none; touch-action: none; pointer-events: auto; }
+.uis-crr-grip { position: absolute; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: #fff; border: 2px solid var(--uis-accent); box-sizing: border-box; touch-action: none; }
+/* the turning handle: the frame, the line and the hub are drawn turned by the angle; the handle sits on the line, a fixed distance from the centre */
+.uis-crr-spin { position: absolute; inset: 0; pointer-events: none; --r: 26cqmin; }
+.uis-crr-spin-frame { position: absolute; inset: 0; outline: 1px solid #fff; }
+.uis-crr-spin-line { position: absolute; left: 50%; bottom: 50%; width: 2px; height: var(--r); margin-left: -1px; background: #fff; }
+.uis-crr-spin-hub { position: absolute; left: 50%; top: 50%; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%; background: #fff; border: 2px solid var(--uis-accent); box-sizing: border-box; }
+.uis-crr-spin-handle { position: absolute; left: 50%; top: calc(50% - var(--r)); width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px; border-radius: 50%; background: #fff; border: 2px solid var(--uis-accent); box-sizing: border-box; cursor: grab; touch-action: none; pointer-events: auto; }

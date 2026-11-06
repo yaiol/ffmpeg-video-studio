@@ -178,6 +178,15 @@ impl VideoCodec {
         }
     }
 
+    /// The codec as a family, whichever engine encodes it: a graphics-card encoder is its software codec's family (`h264_nvenc` is H.264).
+    pub fn family(self) -> VideoCodec {
+        match self {
+            VideoCodec::H264Amd | VideoCodec::H264Nvenc | VideoCodec::H264Qsv => VideoCodec::H264,
+            VideoCodec::H265Amd | VideoCodec::H265Nvenc | VideoCodec::H265Qsv => VideoCodec::H265,
+            other => other,
+        }
+    }
+
     /// The hardware encoders of AMD graphics cards.
     pub fn is_amd(self) -> bool {
         matches!(self, VideoCodec::H264Amd | VideoCodec::H265Amd)
@@ -196,6 +205,47 @@ impl VideoCodec {
             VideoCodec::ProRes | VideoCodec::Raw | VideoCodec::Copy => (0, 0, 0),
         }
     }
+}
+
+/// Which engine encodes the codec families that have a graphics-card version (H.264 and H.265): the one Settings names, for every preset
+/// that does not ask for software.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Encoder {
+    /// x264 / x265: the same result on every machine.
+    #[default]
+    Software,
+    /// The first graphics card that runs it (NVIDIA, then AMD, then Intel); software when none does.
+    Auto,
+    Nvidia,
+    Amd,
+    Intel,
+}
+
+impl Encoder {
+    pub const ALL: [Encoder; 5] = [Encoder::Software, Encoder::Auto, Encoder::Nvidia, Encoder::Amd, Encoder::Intel];
+
+    /// The makers whose cards this choice tries, in order (`VideoCodec::graphics_maker`'s names).
+    pub fn makers(self) -> &'static [&'static str] {
+        match self {
+            Encoder::Software => &[],
+            Encoder::Auto => &["nvidia", "amd", "intel"],
+            Encoder::Nvidia => &["nvidia"],
+            Encoder::Amd => &["amd"],
+            Encoder::Intel => &["intel"],
+        }
+    }
+}
+
+/// What a preset says about the engine.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PresetEncoder {
+    /// The engine Settings names.
+    #[default]
+    Default,
+    /// Always software, whatever Settings names (archival work, where the quality per megabyte matters most).
+    Software,
 }
 
 /// x264's and x265's `-tune`: what the encoder is told the pictures are like.
@@ -285,6 +335,8 @@ pub struct Preset {
     pub name: String,
     pub container: Container,
     pub video: VideoCodec,
+    /// Which engine encodes it (only H.264 and H.265 have a choice).
+    pub encoder: PresetEncoder,
     /// Constant rate factor; lower is better and larger. Unused for stream copy.
     pub crf: u32,
     /// Quality number or target bitrate, for the codecs that offer the choice (`has_rate_choice`).
@@ -309,6 +361,7 @@ impl Default for Preset {
             name: String::new(),
             container: Container::Mkv,
             video: VideoCodec::H264,
+            encoder: PresetEncoder::Default,
             crf: 20,
             rate: RateMode::Crf,
             bitrate_kbps: 2000,
@@ -321,6 +374,11 @@ impl Default for Preset {
     }
 }
 
+/// The ids of the presets a fresh install held, one per graphics-card encoder, before the engine became a setting. A settings file that
+/// still has them loses them (they are the families' presets with a different engine, which Settings now chooses).
+pub const RETIRED_HARDWARE_IDS: [&str; 6] =
+    ["default-h264-amd", "default-h265-amd", "default-h264-nvenc", "default-h265-nvenc", "default-h264-qsv", "default-h265-qsv"];
+
 /// A short unique id for a new preset: time plus a counter, no dependency for it.
 pub fn new_id() -> String {
     use std::sync::atomic::{AtomicU32, Ordering};
@@ -332,6 +390,12 @@ pub fn new_id() -> String {
 impl Preset {
     pub fn new(name: &str) -> Preset {
         Preset { id: new_id(), name: name.to_owned(), ..Preset::default() }
+    }
+
+    /// A preset saved before the engine was a setting named a graphics-card encoder as its codec; it is the codec's family now.
+    pub fn into_family(mut self) -> Preset {
+        self.video = self.video.family();
+        self
     }
 
     /// The same preset with every field repaired to what its container accepts.
@@ -392,24 +456,6 @@ pub fn defaults() -> Vec<Preset> {
         mk("default-raw-avi", "Uncompressed RGB (AVI)", &|p| {
             p.container = Container::Avi;
             p.video = VideoCodec::Raw;
-        }),
-        mk("default-h264-amd", "H.264 AMD graphics card (MKV)", &|p| {
-            p.video = VideoCodec::H264Amd;
-        }),
-        mk("default-h265-amd", "H.265 AMD graphics card (MKV)", &|p| {
-            p.video = VideoCodec::H265Amd;
-        }),
-        mk("default-h264-nvenc", "H.264 NVIDIA graphics card (MKV)", &|p| {
-            p.video = VideoCodec::H264Nvenc;
-        }),
-        mk("default-h265-nvenc", "H.265 NVIDIA graphics card (MKV)", &|p| {
-            p.video = VideoCodec::H265Nvenc;
-        }),
-        mk("default-h264-qsv", "H.264 Intel graphics (MKV)", &|p| {
-            p.video = VideoCodec::H264Qsv;
-        }),
-        mk("default-h265-qsv", "H.265 Intel graphics (MKV)", &|p| {
-            p.video = VideoCodec::H265Qsv;
         }),
         mk("default-av1", "AV1 (MKV)", &|p| {
             p.video = VideoCodec::Av1;

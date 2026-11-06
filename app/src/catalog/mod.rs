@@ -5,28 +5,39 @@
 //! element structure as its JSX twin in the shared catalog. Only the controls this app uses are
 //! ported; the rest are `pending` — see the project's CLAUDE.md for the status table.
 
-mod colorpicker;
-mod combobox;
+mod pkr_color;
+mod cbo_standard;
+mod fld_labelled;
 mod filedrop;
+mod cbo_filter;
+mod crop_rotate;
+mod curve;
 mod header;
 mod icons;
-mod numberfield;
+mod num;
 #[allow(dead_code)] // the shared file also serves controls this app does not have
 mod popover;
 pub mod news;
-mod news_dialog;
+mod dlg_news;
 mod news_loader;
-mod news_setting;
-mod news_text;
-mod settings;
+mod markdown_renderer;
+mod stg_view;
+mod equalizer;
+mod transfer;
+mod yrgb;
 
-pub use colorpicker::ColorPicker;
-pub use combobox::{ComboItem, Combobox};
-pub use filedrop::DropZone;
-pub use header::AppHeader;
-pub use icons::GithubIcon;
-pub use numberfield::NumberField as NumberInput;
-pub use popover::Popover;
-pub use news_loader::NewsLoader;
-pub use news_setting::NewsSetting;
-pub use settings::{AppTab, SettingsView};
+pub use pkr_color::UisPkrColor;
+pub use cbo_standard::{UisCboStandard, UisComboItem};
+pub use fld_labelled::UisFldLabelled;
+pub use crop_rotate::UisCropRotate;
+pub use curve::{CurveChannel, CurvePoints, UisCurve, straight};
+pub use filedrop::LbsDropZone;
+pub use cbo_filter::{UisCboCategory, UisCboFilter};
+pub use header::UisAppHeader;
+pub use icons::UisIcoGithub;
+pub use num::UisNum;
+pub use news_loader::UisNewsLoader;
+pub use stg_view::{UisAppTab, UisStgView};
+pub use equalizer::{EqView, UisEqualizer};
+pub use transfer::UisTransfer;
+pub use yrgb::{UisYrgb, YrgbBar, YrgbView};

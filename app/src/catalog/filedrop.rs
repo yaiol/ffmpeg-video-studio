@@ -1,6 +1,6 @@
-// twin: ui-fx-filedrop.jsx jsx@72a3a2fbfa64 rsx@ab19e5f2f472
-//! DropZone — twin of `ui-fx-filedrop.jsx` (`useFileDrop`): a position:relative region that accepts files
-//! dropped on it and dims itself with the `.drop-overlay` while one is over it. A component rather than a
+// twin: uis-fx-filedrop.jsx jsx@22caf1bdad99 rsx@ddfb6b48960b
+//! LbsDropZone — twin of `uis-fx-filedrop.jsx` (`LbsHokFileDrop`): a position:relative region that accepts files
+//! dropped on it and dims itself with the `.uis-ovl-drop` while one is over it. A component rather than a
 //! hook because rsx cannot spread props onto an existing element; the DOM it produces is the same.
 //!
 //! `accept` is the list of extensions to take (case-insensitive; empty = everything); files that do not
@@ -16,7 +16,7 @@ use dioxus::html::HasFileData;
 use dioxus::prelude::*;
 
 #[component]
-pub fn DropZone(
+pub fn LbsDropZone(
     class: String,
     label: String,
     #[props(default)] accept: Vec<String>,
@@ -72,8 +72,8 @@ pub fn DropZone(
             },
             {children}
             if over() {
-                div { class: "drop-overlay",
-                    span { class: "drop-overlay-label", "{label}" }
+                div { class: "uis-ovl-drop",
+                    span { class: "uis-ovl-drop-label", "{label}" }
                 }
             }
         }

@@ -1,9 +1,9 @@
-// twin: ui-ctl-colorpicker.jsx jsx@08cf1133c966 rsx@93b7353b3e59
-//! ColorPicker — twin of `ui-ctl-colorpicker.jsx`: the colour picker. A swatch button that opens a
+// twin: uis-pkr-color.jsx jsx@b12e784d0179 rsx@0a18caf96780
+//! UisPkrColor — twin of `uis-pkr-color.jsx`: the colour picker. A swatch button that opens a
 //! draggable popup: a saturation/hue field, an eyedropper (when the platform has one), a hex input,
 //! R/G/B number fields, a row of quick swatches, and Cancel / Apply. Same classes and element order as
-//! the JSX; it borrows the shared field classes (`.dlg-form` / `.input` / `.btn.icon` / `.btn`) and the
-//! shared `NumberField`.
+//! the JSX; it borrows the shared field classes (`.uis-dlg-form` / `.uis-txt` / `.uis-btn.ico` / `.uis-btn`) and the
+//! shared `UisNum`.
 //!
 //! Controlled: `color` (hex string) + `on_change(hex)` - `on_change` fires on Apply only, so the caller
 //! commits once. The labels are props, so the control carries no i18n key coupling.
@@ -12,11 +12,13 @@
 //! field is built in rsx with the SAME element and class names (`react-colorful*`) and the same look;
 //! the field's pointer capture goes through `document::eval` by element id, and dragging the popup by
 //! its grip uses a transparent overlay while the button is held - no page-wide listeners.
+//! The eyedropper: WebView2 has no `window.EyeDropper`, so on Windows the pixel under the cursor is read from the screen
+//! (anywhere on the desktop) while the button is pressed and released; elsewhere the page's own EyeDropper is used when it exists.
 //! Differs: behaviour none. Form only: the saturation/hue field is built here (the JSX uses react-colorful) under the
 //! same class names and look, and dragging the popup uses a transparent sheet while the button is held instead of
 //! document listeners.
 
-use super::numberfield::NumberField;
+use super::num::UisNum;
 use super::popover::use_dismiss;
 use dioxus::prelude::*;
 use dioxus_free_icons::{
@@ -53,6 +55,68 @@ fn hex_to_rgb(h: &str) -> (u32, u32, u32) {
 
 fn rgb_to_hex(r: u32, g: u32, b: u32) -> String {
     format!("#{:02x}{:02x}{:02x}", r.min(255), g.min(255), b.min(255))
+}
+
+/// The screen, read pixel by pixel (Windows): what the eyedropper needs and a web page cannot do.
+#[cfg(windows)]
+mod screen {
+    #[repr(C)]
+    struct Point {
+        x: i32,
+        y: i32,
+    }
+    #[link(name = "user32")]
+    unsafe extern "system" {
+        fn GetCursorPos(p: *mut Point) -> i32;
+        fn GetDC(window: isize) -> isize;
+        fn ReleaseDC(window: isize, dc: isize) -> i32;
+        fn GetAsyncKeyState(key: i32) -> i16;
+    }
+    #[link(name = "gdi32")]
+    unsafe extern "system" {
+        fn GetPixel(dc: isize, x: i32, y: i32) -> u32;
+    }
+
+    fn down(key: i32) -> bool {
+        // SAFETY: a plain query of a key's state.
+        unsafe { GetAsyncKeyState(key) as u16 & 0x8000 != 0 }
+    }
+
+    /// The colour of the pixel under the cursor, as `#rrggbb`.
+    fn under_cursor() -> Option<String> {
+        let mut p = Point { x: 0, y: 0 };
+        // SAFETY: `p` is a valid out-parameter; the screen's device context is released before returning.
+        let rgb = unsafe {
+            if GetCursorPos(&mut p) == 0 {
+                return None;
+            }
+            let dc = GetDC(0);
+            if dc == 0 {
+                return None;
+            }
+            let c = GetPixel(dc, p.x, p.y);
+            ReleaseDC(0, dc);
+            c
+        };
+        (rgb != 0xFFFF_FFFF).then(|| format!("#{:02x}{:02x}{:02x}", rgb & 0xFF, (rgb >> 8) & 0xFF, (rgb >> 16) & 0xFF))
+    }
+
+    /// Waits for a press and release of the left button and answers the colour under the cursor at the release; Esc answers none.
+    pub fn pick() -> Option<String> {
+        let nap = std::time::Duration::from_millis(15);
+        let mut pressed = false;
+        loop {
+            if down(0x1B) {
+                return None;
+            }
+            let now = down(0x01);
+            if pressed && !now {
+                return under_cursor();
+            }
+            pressed = pressed || now;
+            std::thread::sleep(nap);
+        }
+    }
 }
 
 /// h 0-360, s 0-100, v 0-100.
@@ -105,7 +169,7 @@ enum Part {
 }
 
 #[component]
-pub fn ColorPicker(
+pub fn UisPkrColor(
     color: String,
     on_change: EventHandler<String>,
     #[props(default)] cancel_label: String,
@@ -127,14 +191,18 @@ pub fn ColorPicker(
     let mut moving = use_signal(|| Option::<(f64, f64)>::None);
     // A field/hue strip is held: which, and its box (left, top, width, height) read when it was grabbed.
     let mut drag = use_signal(|| Option::<(Part, f64, f64, f64, f64)>::None);
-    let mut has_eyedropper = use_signal(|| false);
+    let mut has_eyedropper = use_signal(|| cfg!(windows));
+    // The eyedropper is waiting for a click on the screen.
+    let mut picking = use_signal(|| false);
 
     let close = use_callback(move |_: ()| open.set(false));
     use_dismiss(open(), &btn_id, &pop_id, close);
 
     use_future(move || async move {
-        if let Ok(yes) = document::eval("dioxus.send(!!window.EyeDropper);").recv::<bool>().await {
-            has_eyedropper.set(yes);
+        if !cfg!(windows) {
+            if let Ok(yes) = document::eval("dioxus.send(!!window.EyeDropper);").recv::<bool>().await {
+                has_eyedropper.set(yes);
+            }
         }
     });
 
@@ -269,24 +337,24 @@ pub fn ColorPicker(
             button {
                 id: "{btn_id}",
                 r#type: "button",
-                class: if open() { "swatch on" } else { "swatch" },
+                class: if open() { "uis-swt on" } else { "uis-swt" },
                 style: "background: {color}; {swatch_shadow(open(), &color)}",
                 onclick: toggle,
             }
             if open() {
-                document::Style { "{FIELD_CSS}" }
+                style { "{FIELD_CSS}" }
                 div {
                     id: "{pop_id}",
-                    class: "dlg-form",
-                    style: "position: fixed; z-index: 9999; top: {top}px; left: {left}px; background: var(--dlg-bgd); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 32px #0008; display: flex; flex-direction: column; width: 220px; overflow: hidden",
+                    class: "uis-dlg-form",
+                    style: "position: fixed; z-index: 9999; top: {top}px; left: {left}px; background: var(--uis-dlg-bgd); border: 1px solid var(--uis-border); border-radius: 10px; box-shadow: 0 8px 32px #0008; display: flex; flex-direction: column; width: 220px; overflow: hidden",
                     div {
-                        style: "cursor: grab; display: flex; align-items: center; justify-content: center; padding: 6px 0 4px; border-bottom: 1px solid var(--border); color: var(--text-dim); flex-shrink: 0",
+                        style: "cursor: grab; display: flex; align-items: center; justify-content: center; padding: 6px 0 4px; border-bottom: 1px solid var(--uis-border); color: var(--uis-text-dim); flex-shrink: 0",
                         onmousedown: move |e| {
                             e.prevent_default();
                             let (top, left) = pop_pos();
                             moving.set(Some((e.client_coordinates().x - left, e.client_coordinates().y - top)));
                         },
-                        Icon { class: "icon-inline", icon: LdGripHorizontal }
+                        Icon { class: "uis-ico-inline", icon: LdGripHorizontal }
                     }
                     div { style: "display: flex; flex-direction: column; gap: 10px; padding: 12px",
                         div { class: "react-colorful", style: "width: 100%",
@@ -331,7 +399,7 @@ pub fn ColorPicker(
                                     onkeydown: move |e| nudge(Part::Hue, e),
                                     div {
                                         class: "react-colorful__pointer react-colorful__hue-pointer",
-                                        style: "left: {h / 360.0 * 100.0}%",
+                                        style: "top: 50%; left: {h / 360.0 * 100.0}%",
                                         div { class: "react-colorful__pointer-fill", style: "background-color: {hue_color}" }
                                     }
                                 }
@@ -341,16 +409,27 @@ pub fn ColorPicker(
                             if has_eyedropper() {
                                 button {
                                     r#type: "button",
-                                    class: "btn icon",
+                                    class: "uis-btn ico",
                                     title: if pick_title.is_empty() { None } else { Some(pick_title.clone()) },
                                     onclick: move |_| {
                                         spawn(async move {
-                                            let mut ev = document::eval(
-                                                "try { const r = await new window.EyeDropper().open(); dioxus.send(r.sRGBHex); } catch (_) { dioxus.send(''); }",
-                                            );
-                                            if let Ok(c) = ev.recv::<String>().await {
-                                                if valid_hex(&c) {
+                                            #[cfg(windows)]
+                                            {
+                                                picking.set(true);
+                                                if let Ok(Some(c)) = tokio::task::spawn_blocking(screen::pick).await {
                                                     update_draft(c);
+                                                }
+                                                picking.set(false);
+                                            }
+                                            #[cfg(not(windows))]
+                                            {
+                                                let mut ev = document::eval(
+                                                    "try { const r = await new window.EyeDropper().open(); dioxus.send(r.sRGBHex); } catch (_) { dioxus.send(''); }",
+                                                );
+                                                if let Ok(c) = ev.recv::<String>().await {
+                                                    if valid_hex(&c) {
+                                                        update_draft(c);
+                                                    }
                                                 }
                                             }
                                         });
@@ -359,7 +438,7 @@ pub fn ColorPicker(
                                 }
                             }
                             input {
-                                class: "input",
+                                class: "uis-txt",
                                 style: "flex: 1; font-family: monospace",
                                 maxlength: "7",
                                 value: "{hex_now}",
@@ -382,14 +461,14 @@ pub fn ColorPicker(
                                 div {
                                     key: "{name}",
                                     style: "display: flex; flex-direction: column; gap: 2px; align-items: center",
-                                    NumberField {
+                                    UisNum {
                                         min: Some(0.0),
                                         max: Some(255.0),
                                         value: Some(value as f64),
                                         width: "56px",
                                         on_change: move |val: Option<f64>| handle_rgb(ch, val.map(|v| v.round().clamp(0.0, 255.0) as u32)),
                                     }
-                                    span { style: "font-size: 10px; color: var(--text-dim); text-transform: uppercase", "{name}" }
+                                    span { style: "font-size: 10px; color: var(--uis-text-dim); text-transform: uppercase", "{name}" }
                                 }
                             }
                         }
@@ -398,7 +477,7 @@ pub fn ColorPicker(
                                 button {
                                     key: "{c}",
                                     r#type: "button",
-                                    class: if draft_now == c { "swatch small on" } else { "swatch small" },
+                                    class: if draft_now == c { "uis-swt small on" } else { "uis-swt small" },
                                     style: "background: {c}; {swatch_shadow(draft_now == c, c)}",
                                     onclick: move |_| update_draft(c.to_string()),
                                 }
@@ -407,14 +486,14 @@ pub fn ColorPicker(
                         div { style: "display: flex; gap: 8px",
                             button {
                                 r#type: "button",
-                                class: "btn subtle",
+                                class: "uis-btn subtle",
                                 style: "flex: 1",
                                 onclick: move |_| open.set(false),
                                 "{cancel_label}"
                             }
                             button {
                                 r#type: "button",
-                                class: "btn primary",
+                                class: "uis-btn primary",
                                 style: "flex: 1",
                                 onclick: move |_| {
                                     on_change.call(draft());
@@ -424,6 +503,10 @@ pub fn ColorPicker(
                             }
                         }
                     }
+                }
+                // While the eyedropper waits, a transparent sheet keeps the click that picks from reaching the window beneath.
+                if picking() {
+                    div { style: "position: fixed; inset: 0; z-index: 10000; cursor: crosshair; user-select: none" }
                 }
                 // While the grip is held the pointer is followed by a transparent sheet over the window,
                 // so the popup keeps moving however fast the pointer leaves it.

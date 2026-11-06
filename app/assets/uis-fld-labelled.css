@@ -1,0 +1,292 @@
+/* uis-fld-labelled.css - the COMPACT family's field: label and control on ONE line (.uis-fld-labelled.compact).
+   Paired with uis-fld-labelled.jsx (and its rsx twin); lives apart from uis-app.css because
+   compact is a mode of the catalog with its own class family (.uis-cmp-*), independent of .small.
+   The target density is a dense tool panel (Shutter Encoder): 20px controls, 11px type, 10px
+   captions. The control inside keeps its colours and border; only its height, padding and type
+   size come from the compact tokens (so they must out-rank the control's own base rule). */
+:root {
+  --uis-cmp-h: 20px;
+  --uis-cmp-gap: 6px;
+  --uis-cmp-label-w: 68px;
+  --uis-cmp-font: 11px;
+  --uis-cmp-label-font: 11px;
+  --uis-cmp-pad: 6px;
+  --uis-cmp-caret: 18px;
+}
+
+.uis-fld-labelled.compact {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--uis-cmp-gap);
+  min-height: var(--uis-cmp-h);
+}
+
+.uis-fld-labelled.compact > .uis-fld-labelled-label {
+  flex: 0 0 var(--uis-cmp-label-w);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--uis-accent);
+  font-size: var(--uis-cmp-label-font);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.uis-fld-labelled-ctl {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.uis-fld-labelled-ctl > .uis-ddn-std,
+.uis-fld-labelled-ctl > .uis-txt,
+.uis-fld-labelled-ctl > .uis-num {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--uis-cmp-h);
+  font-size: var(--uis-cmp-font);
+  border-radius: 5px;
+}
+
+.uis-fld-labelled-ctl > .uis-ddn-std {
+  padding: 0 var(--uis-cmp-caret) 0 var(--uis-cmp-pad);
+  background-position: right 5px center;
+  background-size: 10px;
+}
+
+.uis-fld-labelled-ctl > .uis-txt {
+  padding: 0 var(--uis-cmp-pad);
+}
+
+.uis-fld-labelled-ctl > .uis-btn {
+  height: var(--uis-cmp-h);
+  min-height: 0;
+  padding: 0 var(--uis-cmp-pad);
+  font-size: var(--uis-cmp-font);
+  border-radius: 5px;
+}
+
+.uis-fld-labelled-ctl > .uis-btn.ico {
+  min-width: var(--uis-cmp-h);
+  padding: 0;
+}
+
+/* .uis-cmp-panel - a whole panel in the compact mode: every select, input and button directly in it, or
+   in a welded group (.uis-barh-grp), takes the compact height and type size, so what is NOT a field
+   (the Apply button, a run row) is as dense as the fields. */
+.uis-cmp-panel .uis-btn,
+.uis-cmp-panel .uis-ddn-std,
+.uis-cmp-panel .uis-txt {
+  height: var(--uis-cmp-h);
+  min-height: 0;
+  font-size: var(--uis-cmp-font);
+  border-radius: 5px;
+}
+
+/* A welded group (.uis-barh-grp) in a compact panel is as high as the compact controls in it, not the bar's 30px. */
+.uis-cmp-panel .uis-barh-grp {
+  height: var(--uis-cmp-h);
+}
+
+.uis-cmp-panel .uis-barh-grp > * {
+  height: var(--uis-cmp-h);
+  min-height: 0;
+}
+
+.uis-cmp-panel .uis-btn:not(.ico) {
+  padding: 0 var(--uis-cmp-pad);
+}
+
+.uis-cmp-panel .uis-btn.ico {
+  min-width: var(--uis-cmp-h);
+  padding: 0;
+}
+
+.uis-cmp-panel .uis-ddn-std {
+  padding: 0 var(--uis-cmp-caret) 0 var(--uis-cmp-pad);
+  background-position: right 5px center;
+  background-size: 10px;
+}
+
+/* The rest of the controls of a compact panel: a number box and a colour swatch take the compact height too, and a
+   multi-line text box (a textarea on .uis-txt) grows with its lines from that height instead of being cut to it. */
+.uis-cmp-panel .uis-num {
+  height: var(--uis-cmp-h);
+  font-size: var(--uis-cmp-font);
+  border-radius: 5px;
+}
+
+.uis-cmp-panel .uis-swt {
+  box-sizing: border-box;
+  width: var(--uis-cmp-h);
+  height: var(--uis-cmp-h);
+  border-width: 1px;
+  border-radius: 5px;
+}
+
+/* An open swatch rings itself with an inline 2px shadow, which makes it look 4px larger than its neighbours; the
+   white border alone says "open" here. */
+.uis-cmp-panel .uis-swt.on {
+  box-shadow: none !important;
+}
+
+.uis-cmp-panel .uis-swt.small {
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.uis-cmp-panel textarea.uis-txt {
+  height: auto;
+  min-height: var(--uis-cmp-h);
+  max-height: 64px;
+  padding: 3px var(--uis-cmp-pad);
+  line-height: 14px;
+  field-sizing: content;
+}
+
+/* .uis-cmp-drawer - a panel of NUMERIC compact fields (a grading drawer, an equaliser, a level panel): the label column is
+   fixed, the number box is 44px with its text right-aligned and no steppers (it is dragged), the reset beside it is
+   square. Sits beside .uis-cmp-panel on the same element. */
+.uis-cmp-drawer .uis-fld-labelled.compact {
+  --uis-cmp-label-w: 68px;
+}
+
+.uis-cmp-drawer .uis-fld-labelled-ctl > .uis-num {
+  flex: 0 0 44px;
+}
+
+.uis-cmp-drawer .uis-num-steppers {
+  display: none;
+}
+
+.uis-cmp-drawer .uis-num-input {
+  width: 0;
+  padding: 0 4px;
+  font-size: var(--uis-cmp-font);
+  text-align: right;
+}
+
+.uis-cmp-drawer .uis-fld-labelled-ctl .fx-reset {
+  flex: 0 0 var(--uis-cmp-h);
+}
+
+/* .uis-cmp-head - a header line of a compact panel: its label takes only its own width. */
+.uis-cmp-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  --uis-cmp-label-w: auto;
+}
+
+.uis-cmp-head .uis-fld-labelled.compact > .uis-fld-labelled-label {
+  flex: 0 0 auto;
+}
+
+/* .uis-cmp-row - fields side by side that wrap, each as wide as its own content. */
+.uis-cmp-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 4px 16px;
+}
+
+.uis-cmp-row > .uis-fld-labelled.compact {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+/* .uis-cmp-inline - a line of fields whose labels and boxes take only their own width. */
+.uis-cmp-inline .uis-fld-labelled.compact {
+  width: auto;
+  --uis-cmp-label-w: auto;
+}
+
+.uis-cmp-inline .uis-fld-labelled.compact > .uis-fld-labelled-label {
+  flex: 0 0 auto;
+}
+
+/* .uis-cmp-side - the side panel of a tool (a column of rows, each a field or a welded group): a welded group spans the
+   column and its select or input takes what the buttons leave. Sits beside .uis-cmp-panel on the same element. */
+.uis-cmp-side .uis-barh-grp {
+  width: 100%;
+}
+
+.uis-cmp-side .uis-ddn-std {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+}
+
+.uis-cmp-side .uis-barh-grp .uis-txt {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+/* .uis-cmp-run - the last row of a side panel: a small select (a count of two digits) and the welded run buttons, side by side. */
+.uis-cmp-run {
+  display: flex;
+  gap: 8px;
+}
+
+.uis-cmp-side .uis-cmp-run .uis-barh-grp {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.uis-cmp-side .uis-cmp-run .uis-ddn-std {
+  flex: 0 0 auto;
+  width: 4.5em;
+}
+
+/* .uis-cmp-numread - a number box that only SHOWS a value under a slider: as wide as its column, the text centred. */
+.uis-cmp-numread .uis-num {
+  width: 100%;
+  height: var(--uis-cmp-h);
+  min-height: 0;
+}
+
+.uis-cmp-numread .uis-num-input {
+  width: 0;
+  padding: 0;
+  text-align: center;
+  font-size: var(--uis-cmp-font);
+}
+
+/* .uis-cmp-bar - a wrapping line of controls over a picture (a text's bar): its text boxes share the width. */
+.uis-cmp-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.uis-cmp-bar .uis-txt {
+  flex: 1 1 160px;
+  min-width: 120px;
+}
+
+/* .uis-cmp-pinned - a centred title whose buttons sit at the two ends of the line (.cmp-start at the left, the others at the right). */
+.uis-cmp-pinned {
+  position: relative;
+  width: 100%;
+  justify-content: center;
+}
+
+.uis-cmp-pinned > .uis-btn {
+  position: absolute;
+  right: 0;
+}
+
+.uis-cmp-pinned > .uis-btn.cmp-start {
+  right: auto;
+  left: 0;
+}

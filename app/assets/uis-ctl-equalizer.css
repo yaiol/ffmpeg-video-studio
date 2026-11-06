@@ -1,0 +1,75 @@
+/* uis-ctl-equalizer.css — the Equalizer control (lib/uis-ctl-equalizer.jsx)
+   ═══════════════════════════════════════════════════════════════════════════
+   An OPTIONAL control's skin, so it is its own file: the sync copies a catalog
+   CSS into an app only when that app uses it, and `uis-app.css` — which every
+   app holds unconditionally — is for what every app has by being a yaiol app.
+   It rides with the component: the sync keys usage by STEM, so
+   `uis-ctl-equalizer.css` travels wherever `uis-ctl-equalizer.jsx` does, and the
+   jsx side-effect-imports it so the copy is actually loaded.
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* A row of bands. Each band is a column: value above, the vertical track, caption below.
+   Colour flows from the container's surface tokens; the thumb's and the fill's POSITION is
+   the value and arrives as inline `bottom` / `height` from the component (state, not
+   geometry). */
+.uis-eqr { display: flex; align-items: flex-start; gap: 6px; }
+.uis-eqr-band { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 34px; flex-shrink: 0; }
+.uis-eqr-value {
+  font-size: 11px; line-height: 14px; height: 14px; white-space: nowrap;
+  color: var(--uis-text-dim); font-variant-numeric: tabular-nums;
+}
+.uis-eqr-label { font-size: 11px; line-height: 14px; font-weight: 700; color: var(--uis-text); white-space: nowrap; }
+
+/* The track is the grab area (wider than the rail it shows, so it is easy to hit) and the
+   positioning context of everything drawn on it. */
+.uis-eqr-track {
+  position: relative; width: 28px; height: 132px; cursor: ns-resize; outline: none;
+  touch-action: none;                     /* the drag IS the gesture — never scroll */
+}
+/* the children never take the pointer: every event lands on the track, whose box is the scale */
+.uis-eqr-track > * { pointer-events: none; }
+.uis-eqr-rail {
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 6px; margin-left: -3px;
+  border: 1px solid var(--uis-border); border-radius: 3px; background-color: var(--uis-s-inp, transparent);
+  box-sizing: border-box;
+}
+.uis-eqr-track:hover .uis-eqr-rail { border-color: var(--uis-text-dim); }
+.uis-eqr-track:focus-visible .uis-eqr-rail { border-color: var(--uis-accent); }
+/* the middle of the range, across the whole band: a boost is above it, a cut below */
+.uis-eqr-zero { position: absolute; left: 3px; right: 3px; height: 1px; background: var(--uis-border-strong, var(--uis-border)); }
+/* from the middle line to the thumb */
+.uis-eqr-fill {
+  position: absolute; left: 50%; width: 4px; margin-left: -2px; border-radius: 2px;
+  background: var(--uis-accent);
+}
+.uis-eqr-thumb {
+  position: absolute; left: 50%; width: 20px; height: 10px; margin-left: -10px;
+  transform: translateY(50%);             /* `bottom` is the value; centre the thumb on it */
+  border: 1px solid var(--uis-border-strong, var(--uis-border)); border-radius: 3px; box-sizing: border-box;
+  background-color: var(--uis-s-inp, var(--uis-bg));
+}
+.uis-eqr-track:hover .uis-eqr-thumb { border-color: var(--uis-text-dim); }
+.uis-eqr-track:focus-visible .uis-eqr-thumb { border-color: var(--uis-accent); }
+.uis-eqr.disabled { opacity: .45; }
+.uis-eqr.disabled .uis-eqr-track { cursor: default; }
+
+/* The graph view (EqualizerGraph in uis-ctl-equalizer.jsx): the bands as one curve on a plot panel that follows the theme (--uis-plot-*);
+   its size is the component's inline width / height, because the pointer is read against it. */
+.uis-eqr-graph {
+  position: relative; flex: 0 0 auto; background: var(--uis-plot-bg); border-radius: 6px; outline: none;
+  cursor: crosshair; touch-action: none; user-select: none; overflow: hidden;
+}
+.uis-eqr-gsvg { position: absolute; inset: 0; pointer-events: none; }
+.uis-eqr-grid { stroke: var(--uis-plot-grid); stroke-width: 1; }
+.uis-eqr-rule { stroke: var(--uis-plot-grid); stroke-width: 1; }
+.uis-eqr-rule-zero { stroke: var(--uis-plot-guide); }
+.uis-eqr-rule-text { font-size: 9px; fill: var(--uis-plot-text-dim); }
+.uis-eqr-line { stroke: var(--uis-plot-line); stroke-width: 1.8; }
+.uis-eqr-dot { fill: var(--uis-plot-bg); stroke: var(--uis-plot-dot-ring); stroke-width: 1.2; }
+.uis-eqr-dot.on { fill: var(--uis-plot-line); }
+.uis-eqr-graph:focus-visible .uis-eqr-dot.sel { stroke: var(--uis-accent); stroke-width: 2.4; }
+.uis-eqr-tick { font-size: 9px; text-anchor: middle; fill: var(--uis-plot-text); }
+.uis-eqr-graph.disabled { opacity: .45; cursor: default; }

@@ -1,0 +1,28 @@
+/* uis-ctl-curve.css — the Curve control (lib/uis-ctl-curve.jsx)
+   ═══════════════════════════════════════════════════════════════════════════
+   An OPTIONAL control's skin, so it is its own file: the sync copies a catalog
+   CSS into an app only when that app uses it. It rides with the component: the
+   sync keys usage by STEM, so `uis-ctl-curve.css` travels wherever
+   `uis-ctl-curve.jsx` does, and the jsx side-effect-imports it.
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Curve — a tone-curve editor (uis-ctl-curve.jsx): the graph on a plot panel and the
+   channel buttons beside it. The panel and its lines follow the theme (--uis-plot-*); the size of the graph is the component's inline width / height, because the
+   pointer is read against it. */
+.uis-crv { display: flex; align-items: flex-start; justify-content: center; gap: 14px; }
+.uis-crv-graph {
+  position: relative; flex: 0 0 auto; background: var(--uis-plot-bg); border-radius: 6px;
+  cursor: crosshair; touch-action: none; user-select: none; overflow: hidden;
+}
+.uis-crv-svg { position: absolute; inset: 0; pointer-events: none; }
+.uis-crv-grid { stroke: var(--uis-plot-grid); stroke-width: 1; }
+.uis-crv-diag { stroke: var(--uis-plot-guide); stroke-width: 1; }
+.uis-crv-dot { stroke: var(--uis-plot-dot-ring); stroke-width: 1.2; }
+.uis-crv-side { display: flex; flex-direction: column; gap: 6px; }
+/* a channel's button: its letter in the channel's colour (the --c token, from the component);
+   the shown one is filled with it */
+.uis-crv-chan { --c: var(--uis-plot-line); font-weight: 600; color: var(--c); }
+.uis-crv-chan.active { background: var(--c); color: #14151a; border-color: var(--c); }

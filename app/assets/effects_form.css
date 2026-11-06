@@ -1,15 +1,39 @@
 /* The few classes of EffectForm (effects_form.rs) that the app's catalog CSS does not have. Everything else is the catalog's own (dlg-field, input, select, btn, hint). */
 .effect-form{display:flex;flex-direction:column;gap:14px}
-pre.cmd{margin:0;padding:7px 9px;min-width:0;background:var(--bg-row);border-radius:8px;color:var(--text-dim);font:11.5px/1.5 "JetBrains Mono",ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+pre.cmd{margin:0;padding:7px 9px;min-width:0;background:var(--uis-bg-row);border-radius:8px;color:var(--uis-text-dim);font:11.5px/1.5 "JetBrains Mono",ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
 .effect-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
-.effect-ctl>.input,.effect-ctl>.select{flex:1;min-width:0}
+.effect-ctl>.uis-txt,.effect-ctl>.uis-ddn-std{flex:1;min-width:0}
 .effect-ctl .sz{flex:0 0 74px}
 .effect-ctl .szp{flex:0 1 auto;max-width:140px}
-.effect-ctl input[type=range]{flex:1;min-width:50px;accent-color:var(--accent)}
-.effect-ctl .unit{color:var(--text-mute);font-size:12px;white-space:nowrap}
-.effect-ctl .unit.bad{color:var(--danger)}
+.effect-ctl input[type=range]{flex:1;min-width:50px;accent-color:var(--uis-accent)}
+.effect-ctl .unit{color:var(--uis-text-mute);font-size:12px;white-space:nowrap}
+.effect-ctl .unit.bad{color:var(--uis-danger)}
 .effect-form .flags{display:flex;flex-wrap:wrap;gap:4px 12px}
 .effect-form .flags label{font-size:12.5px;display:flex;gap:4px;align-items:center}
 
 /* the reset button ends the control's row */
 .effect-ctl .fx-reset { flex: none; margin-left: auto; }
+
+/* the compact form (the work view): a field is one line, so the form's gap is small and a field's controls do not wrap */
+.effect-form.compact{gap:4px}
+.effect-form.compact .uis-fld-labelled.compact{--uis-cmp-label-w:84px}
+.effect-form.compact .uis-fld-labelled-ctl.effect-ctl{flex-wrap:nowrap;gap:4px}
+.effect-form.compact .uis-fld-labelled-ctl.effect-ctl>.uis-num{flex:0 0 50px}
+.effect-form.compact .uis-num-steppers{display:none}
+.effect-form.compact .uis-num-input{font-size:11px;padding:0 4px;text-align:right}
+.effect-form.compact input[type=range]{height:14px;min-width:36px}
+.effect-form.compact .uis-fld-labelled-ctl .fx-reset{flex:0 0 20px}
+.effect-form.compact .uis-fld-labelled-ctl .fx-reset{margin-left:0}
+.effect-form.compact .flags{gap:2px 10px}
+.fav-bar{display:flex;gap:8px;align-items:center;margin:6px 0 10px}
+.fav-bar .uis-txt{flex:1;min-width:0}
+.fav-group{margin-bottom:8px}
+.fav-head{font-weight:600;font-size:12px;color:var(--uis-text-mute);padding:6px 0 2px}
+.fav-row{display:grid;grid-template-columns:16px 18em minmax(0,1fr);gap:8px;align-items:start;padding:3px 0;cursor:pointer}
+.fav-row.locked{cursor:default;opacity:.7}
+.fav-row input{margin:2px 0 0;accent-color:var(--uis-accent)}
+.fav-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fav-what{color:var(--uis-text-mute);font-size:12px;line-height:1.5;min-width:0}
+/* The effects editor's own rows (effects_editor.rs): the entry's name, and the "Add an effect" line. */
+.fx-name-row{display:flex;gap:6px;align-items:center}
+.fx-name-row .uis-txt{flex:1 1 0;min-width:0}

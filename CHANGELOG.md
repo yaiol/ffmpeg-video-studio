@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.0 — 2026-11-06
+
+- The app is renamed FFmpeg Video Studio (it was Video Converter); the installer, the Start menu entry and the settings folder carry the new name
+- The work view now has the sound to work on as well: Video Effects and Audio Effects are two lists, each with standard effects as rows with a switch and the rest added from a menu; a sound band under the film strip carries the fades
+- Fades are set by dragging a handle at the top of the film strip or the sound band, or by typing the seconds
+- Drawers for the sound's channels, equaliser, compressor and level replace long forms; the equaliser and the compressor are drawn as graphs, and the panel under the picture can be hidden
+- Channels, level change and loudness are effects of the Audio Effects list instead of preset settings; presets that had a channel choice are converted automatically
+- The Encoder setting: a preset can use the default encoder or software, and Settings chooses the default (automatic or software); a button checks the encoders again, and the hardware-specific hint texts and the Quality (QP) setting are gone
+- Settings > ffmpeg lets you choose which effects the work view always lists
+- A panel shows the exact ffmpeg command for the selected file, with a Copy button
+- The batch list shows a small picture taken from each video, and its empty list says to drop video files for batch processing
+- Number fields can be dragged with the mouse, and the work view's controls are compact
+
 ## 1.5.0 — 2026-10-27
 
 - Effects are now a catalogue of ffmpeg's own effects, grouped by category, with each effect's options shown as ordinary controls; they run in the order listed and can be reordered by dragging

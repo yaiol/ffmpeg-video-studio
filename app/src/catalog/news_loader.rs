@@ -1,13 +1,13 @@
-// twin: ui-news-loader.jsx jsx@b8052d389adf rsx@9ed4a20e0132
-//! NewsLoader — twin of `ui-news-loader.jsx`: the one-line wiring that makes an app show yaiol news.
+// twin: uis-news-loader.jsx jsx@ca08151bd4dc rsx@d206a425766e
+//! UisNewsLoader — twin of `uis-news-loader.jsx`: the one-line wiring that makes an app show yaiol news.
 //! Once on launch it asks the news module what this app should show; if there is anything it renders the
-//! shared `NewsDialog`, and when the reader closes it, remembers the ids they asked not to see again.
+//! shared `UisDlgNews`, and when the reader closes it, remembers the ids they asked not to see again.
 //! Silent on every failure. Always render it: the news module decides what is shown. A new version comes first
 //! and is shown whatever the user’s "Show news from yaiol" setting says; with the setting off no announcement is
 //! shown or requested. Pass `app_version` (the running release version) to have the new-version check; left empty
 //! there is none, as for an app that has not adopted it.
 //!
-//!   NewsLoader { app_id: APP_ID, app_version: APP_VERSION, lang: lang() }
+//!   UisNewsLoader { app_id: APP_ID, app_version: APP_VERSION, lang: lang() }
 //!
 //! The JSX twin asks its app’s local server over HTTP; here the module is called directly, off the UI
 //! thread. The dialog reads its four words from the app's own `crate::i18n`.
@@ -15,12 +15,12 @@
 //! over HTTP.
 
 use super::news;
-use super::news_dialog::{NewsDialog, NewsItem};
+use super::dlg_news::{UisDlgNews, UisNewsItem};
 use dioxus::prelude::*;
 
 #[component]
-pub fn NewsLoader(app_id: String, lang: String, #[props(default)] app_version: String) -> Element {
-    let mut items = use_signal(|| Option::<Vec<NewsItem>>::None);
+pub fn UisNewsLoader(app_id: String, lang: String, #[props(default)] app_version: String) -> Element {
+    let mut items = use_signal(|| Option::<Vec<UisNewsItem>>::None);
 
     // Once, on launch.
     {
@@ -43,7 +43,7 @@ pub fn NewsLoader(app_id: String, lang: String, #[props(default)] app_version: S
 
     let Some(list) = items() else { return rsx! {} };
     rsx! {
-        NewsDialog {
+        UisDlgNews {
             items: list,
             lang,
             on_close: move |hide_ids: Vec<String>| {

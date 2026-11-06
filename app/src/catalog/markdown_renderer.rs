@@ -1,9 +1,9 @@
-// twin: ui-news-text.jsx jsx@d801f7cd744c rsx@73906403f8ba
-//! NewsText — twin of `ui-news-text.jsx`: the mini-Markdown renderer for a yaiol news announcement's
+// twin: uis-markdown-renderer.jsx jsx@babfd75a4cab rsx@19dd09276645
+//! UisMarkdownRenderer — twin of `uis-markdown-renderer.jsx`: the mini-Markdown renderer for a yaiol news announcement's
 //! text. A subset, on purpose: a blank line starts a paragraph, a block whose every line starts with "- "
 //! is a bullet list, and inline `[label](http(s) url)`, `**bold**`, `*italic*`. Anything else is plain
 //! text, so a stray symbol can never break the dialog. Built as elements, never as HTML. Used by
-//! `NewsDialog`. A link opens in the system browser.
+//! `UisDlgNews`. A link opens in the system browser.
 //! Differs: none.
 
 use dioxus::prelude::*;
@@ -161,20 +161,20 @@ fn render_inline(nodes: &[Inline]) -> Element {
 }
 
 #[component]
-pub fn NewsText(text: String) -> Element {
+pub fn UisMarkdownRenderer(text: String) -> Element {
     let parsed = blocks(&text);
     rsx! {
         for (i, b) in parsed.iter().enumerate() {
             match b {
                 Block::List(items) => rsx! {
-                    ul { key: "{i}", class: "dlp-sub left",
+                    ul { key: "{i}", class: "uis-dlp-sub left",
                         for (j, nodes) in items.iter().enumerate() {
                             li { key: "{j}", {render_inline(nodes)} }
                         }
                     }
                 },
                 Block::Paragraph(nodes) => rsx! {
-                    div { key: "{i}", class: "dlp-sub left", {render_inline(nodes)} }
+                    div { key: "{i}", class: "uis-dlp-sub left", {render_inline(nodes)} }
                 },
             }
         }

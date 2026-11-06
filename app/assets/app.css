@@ -7,14 +7,15 @@
 html, body { height: 100%; margin: 0; }
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--uis-bg);
+  color: var(--uis-text);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
 
 .workspace { padding: 16px 20px; }
-.workspace-empty { color: var(--text-mute); margin: 16px 0; }
+/* the empty list is the same surface as the work view's empty preview (.work-empty), filling the list */
+.converter-list:has(> .work-empty) { display: flex; padding: 0; }
 
 /* ─── Converter: the list, the bottom bar and the options panel ───────────────────────────────
    Layout only. Every colour is a token and every control is the catalog's own class. */
@@ -22,43 +23,112 @@ body {
 .converter-note { padding: 12px 16px; margin: 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .converter-list { padding: 8px 12px; }
 .converter-row { cursor: default; }
-.converter-state-ok  { color: var(--ok); }
-.converter-state-err { color: var(--danger); }
-.converter-state-run { color: var(--accent); }
+.converter-state-ok  { color: var(--uis-ok); }
+.converter-state-err { color: var(--uis-danger); }
+.converter-state-run { color: var(--uis-accent); }
 /* The file's icon: the same square whatever the file. */
-.converter-cover-box { width: 40px; height: 40px; justify-content: center; color: var(--text-mute); background: var(--bg-row); border-radius: 6px; overflow: hidden; }
-.converter-status { font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.converter-cover-box { width: 40px; height: 40px; justify-content: center; color: var(--uis-text-mute); background: var(--uis-bg-row); border-radius: 6px; overflow: hidden; }
+.converter-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+.converter-status { font-size: 12px; color: var(--uis-text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+.view-slot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.view-hidden { display: none; }
 
 /* The window's body: the file list takes what is left, the run's choices sit in a column of their own at
-   the right. The panel is the catalog's .pnl surface; this is layout only. */
+   the right. The panel is the catalog's .uis-pnl surface; this is layout only. */
 .converter-body { flex: 1; min-height: 0; display: flex; }
 .converter-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.converter-panel { width: 236px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-left: 1px solid var(--border); overflow-y: auto; }
+.converter-panel { width: 236px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-left: 1px solid var(--uis-border); overflow-y: auto; }
+/* The height of the strip under the preview: the file list and both drawers (colour, curves) are exactly this tall, the colour drawer's own height. */
+:root { --work-drawer-h: 240px; }
+/* No file yet: one zone takes the whole left side (the preview, the strip and the drawers stay mounted, hidden), the same colour in both converters. */
+.work-empty { flex: 1; min-height: 0; margin: 10px 12px; display: flex; align-items: center; justify-content: center; background: var(--uis-bg-row); border-radius: 6px; }
+.work-empty .wv-failure { font-size: 14px; }
+.converter-main.is-empty > :not(.work-empty):not(.uis-dl-backdrop) { display: none; }
+/* The work view: the preview takes what is left of the main column, the file list is a short strip under it. */
+.work-strip { flex: 0 0 var(--work-drawer-h); height: var(--work-drawer-h); display: flex; flex-direction: column; min-height: 0; }
+.work-list { flex: 1 1 0; min-height: 0; }
+/* The panel under the preview is folded away: the strip and every drawer are hidden (kept mounted), the picture takes the room. */
+.converter-main.is-folded .work-strip, .converter-main.is-folded .work-colour { display: none; }
+/* Folded: the picture is drawn as large as the screen allows, in its own shape (it is scaled up past the size it was made at). */
+.converter-main.is-folded .wv-stage { width: min(100cqw, calc(100cqh * var(--ar, 1.7778))); aspect-ratio: var(--ar, 1.7778); }
+.converter-main.is-folded .wv-stage .wv-picture { width: 100%; height: 100%; max-width: none; max-height: none; }
+/* The preview pane (in the work view and in the preview window): the picture takes what is left, the timeline and the buttons sit under it. */
+.wv { flex: 1; min-height: 300px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 6px; }
+.wv-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--uis-text-dim); height: 24px; }
+.wv-screen { flex: 1; min-height: 120px; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 6px; overflow: hidden; }
+.wv-picture { max-width: 100%; max-height: 100%; object-fit: contain; }
+/* A widget over the picture (the crop): the stage wraps the picture and is exactly as large as it is drawn, whatever the picture's shape - the
+   rectangle's 0 and 100% are the picture's edges. */
+/* the padding leaves room for the rectangle's handles, which sit ON the picture's edge and would be half cut off by the screen otherwise */
+.wv-screen { position: relative; container-type: size; padding: 8px; box-sizing: border-box; }
+.wv-stage { position: relative; display: block; line-height: 0; }
+.wv-stage .wv-picture { display: block; width: auto; height: auto; max-width: 100cqw; max-height: 100cqh; }
+.wv-catcher { position: fixed; inset: 0; z-index: 1000; }
+.wv-applied { color: var(--uis-accent); }
+.wv-crop-tools { display: flex; gap: 4px; }
+.wv-failure { white-space: pre-line; margin: 0; padding: 12px; font-size: 12px; color: var(--uis-text-dim); text-align: center; }
+.wv-times { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.wv-now { color: var(--uis-danger); }
+.wv-length { color: var(--uis-accent); }
+/* The timeline: a track of our own (the native one paints the whole bar in the accent). The cut's span (--in to --out) is the accent part; with no cut the track is plain. The thumb is the moment. */
+/* The timeline is a film strip: small pictures along the file, the part outside the cut dimmed, the moment a red line on top. */
+.wv-film { position: relative; height: 46px; border-radius: 4px; background: color-mix(in srgb, var(--uis-text-mute) 25%, transparent); }
+.wv-film-row { position: absolute; inset: 0; display: flex; overflow: hidden; border-radius: 4px; }
+.wv-film-pic { flex: 1 1 0; min-width: 0; height: 100%; object-fit: cover; pointer-events: none; }
+.wv-film-dim { position: absolute; inset: 0; pointer-events: none; border-radius: 4px; background: linear-gradient(to right, rgba(0,0,0,.55) var(--in, 0%), transparent var(--in, 0%), transparent var(--out, 0%), rgba(0,0,0,.55) var(--out, 0%)); }
+/* The sound under the pictures: one bar per slice of the file, same width, so a moment is at the same place. */
+.wv-wave { position: relative; display: flex; align-items: center; gap: 1px; height: 44px; margin-top: 8px; z-index: 1; border-radius: 4px; background: color-mix(in srgb, var(--uis-text-mute) 15%, transparent); }
+.wv-wave > span { flex: 1 1 0; min-width: 0; background: var(--uis-accent); border-radius: 1px; }
+.wv-wave > span:first-child { margin-left: 0; }
+.wv-timeline { position: absolute; inset: 0; -webkit-appearance: none; appearance: none; width: 100%; height: 100%; margin: 0; background: transparent; cursor: ew-resize; }
+.wv-timeline::-webkit-slider-runnable-track { height: 46px; background: transparent; }
+.wv-timeline::-webkit-slider-thumb { -webkit-appearance: none; width: 3px; height: 46px; background: var(--uis-danger); box-shadow: 0 0 0 1px rgba(255,255,255,.6); }
+/* The fade: a strip under the timeline (the same width, so a moment is at the same place), one handle at each end of the kept part, and the ramp each fade draws. */
+/* A fade is drawn ON its band (the film strip, the sound band): the layer covers the band and lets the mouse through (a click still moves the timeline); only the handles and the number boxes take it. */
+.wv-fades { position: absolute; inset: 0; pointer-events: none; }
+.wv-fade-ramp { position: absolute; top: 0; height: 100%; background: color-mix(in srgb, var(--uis-accent) 30%, transparent); pointer-events: none; }
+.wv-fade-ramp-in { clip-path: polygon(0 100%, 100% 0, 100% 100%); }
+.wv-fade-ramp-out { clip-path: polygon(0 0, 100% 100%, 0 100%); }
+.wv-fade-handle { position: absolute; top: -5px; pointer-events: auto; z-index: 2; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff; border: 2px solid var(--uis-accent); box-sizing: border-box; cursor: ew-resize; touch-action: none; }
+.wv-fadenums { position: absolute; inset: auto 4px 1px 4px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--uis-text); pointer-events: none; z-index: 3; }
+.wv-fadenums > * { pointer-events: auto; padding: 0 4px; border-radius: 4px; background: color-mix(in srgb, var(--uis-bg-elev) 80%, transparent); }
+.wv-bar { display: flex; align-items: center; gap: 4px; }
+.wv-volume { width: 70px; height: 14px; margin: 0 4px; accent-color: var(--uis-accent); }
+.wv-cut { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--uis-text-dim); }
+/* The work view's panel is compact: its rows (CompactField) sit closer together. */
+.work-panel { width: 336px; gap: 6px; padding: 10px; overflow-y: auto; }
+/* The effects take what the other rows leave and scroll by themselves, so Trim, Destination stays in reach. */
+.work-fx { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 0; overflow: hidden; }
+.wfx-label { flex: 0 0 auto; display: flex; align-items: center; min-height: var(--uis-cmp-h); font-size: var(--uis-cmp-label-font); letter-spacing: normal; text-transform: none; }   /* the panel's compact labels: not upper case */
+.wfx { flex: 0 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; gap: 0; padding-right: 2px; }
+.wfx .fx-head { padding: 1px 0; gap: 6px; }
+.wfx .wfx-title { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wfx .fx-body { padding: 2px 0 4px 10px; gap: 4px; }
+/* Laid out like a field row (Destination): no label, so the box starts where the other controls start, and the category button sits at the right like the folder button. */
+/* One entry per category; its effects sit one step in. */
+.wfx-cat > .fx-head .wfx-title { font-weight: 600; }
+/* The count of the effects in use sits in the title's 11px: at the button's own size it made that one row taller than the others. */
+.wfx-cat > .fx-head .wfx-mixed { font-size: 11px; }
+.wfx-add { margin-top: 6px; }
+.wfx-group { padding-left: 10px; display: flex; flex-direction: column; }
 /* Every row is as wide as the column: the select takes what the button leaves. */
-.converter-panel .barh-grp { width: 100%; }
-.converter-panel .select { flex: 1; min-width: 0; width: auto; max-width: none; }
-.converter-panel-run { display: flex; gap: 8px; }
-/* width:auto beats the column rule above, or the group spans the row and its buttons stretch */
-.converter-panel .converter-panel-run .barh-grp { width: auto; flex: 0 0 auto; }
-/* The number at once is two digits at most: the select is as wide as that, not as the column. */
-.converter-panel-run .select { flex: 0 0 auto; width: 4.5em; }
 
 /* ─── The preset editor: a list on the left, the options of the selected entry on the right ─── */
 .manager { display: flex; gap: 24px; align-items: flex-start; height: 100%; min-height: 0; }
 /* Entries are reordered by dragging: the whole row is the handle, the held one dims. */
-.manager-list .lv-item { cursor: grab; user-select: none; }
-.manager-list .lv-item.reordering { opacity: 0.55; cursor: grabbing; }
 .manager-list { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0; }
 .manager-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-/* the form scrolls by itself and its scrollbar sits on the window's edge: it takes the page's right padding (.stg-body, 32px) for itself, and its content keeps the old width */
+/* the form scrolls by itself and its scrollbar sits on the window's edge: it takes the page's right padding (.uis-stg-body, 32px) for itself, and its content keeps the old width */
 .manager-form { flex: 1; min-width: 0; margin-right: -32px; padding-right: 32px; max-height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; }
 .manager-form > * { max-width: 560px; }
+/* the Settings page of ffmpeg lists every effect with its whole sentence: it takes the width the page has */
+.manager-wide, .manager-wide > * { max-width: none; }
 .manager-row { display: flex; gap: 8px; align-items: center; }
 .manager-tokens { display: flex; flex-wrap: wrap; gap: 6px; }
-.manager-example { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-dim); word-break: break-all; }
+.manager-example { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--uis-text-dim); word-break: break-all; }
 
 /* A Settings tab the app supplies (the two editors) is a wide two-pane page, not a 600px column. */
-.stg-page.stg-page-app { max-width: none; height: 100%; }
 
 /* The advanced section of a preset: the same rhythm as the form around it. The controls sit in their
    own column - display:flex on a <details> does not reach its children (they live in an internal
@@ -72,18 +142,53 @@ body {
 .converter-list:focus { outline: none; }
 /* A row's tags: one chip per choice, wrapping under the path. */
 .converter-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; }
-/* The inputs of a row (the cut's start and end) share the group's width. */
-.converter-panel .barh-grp .input { flex: 1; min-width: 0; width: auto; }
-/* The "Add an effect" group: a category button welded to the search box, which takes the rest of the width. */
-.fx-add { width: 100%; }
-.fx-name-row { display: flex; gap: 6px; align-items: center; }
-.fx-name-row .input { flex: 1 1 0; min-width: 0; }
 .fx-card { display: flex; flex-direction: column; }
 .fx-card.moving { opacity: .55; }
 .fx-head { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
-.fx-grip { display: inline-flex; align-items: center; padding: 6px 2px; cursor: grab; color: var(--text-mute); touch-action: none; user-select: none; }
+.fx-grip { display: inline-flex; align-items: center; padding: 6px 2px; cursor: grab; color: var(--uis-text-mute); touch-action: none; user-select: none; }
 .fx-title { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
 .fx-body { display: flex; flex-direction: column; gap: 18px; padding: 8px 0 12px 22px; }
 .fx-dragging { user-select: none; cursor: grabbing; }
-.fx-add-combo { flex: 1 1 0; min-width: 0; display: flex; }
-.fx-add-combo .input { width: 100%; min-width: 0; height: 100%; }
+
+/* The colour drawer (work view): labels, number boxes and buttons are the catalog's (CompactField, NumberInput, .uis-btn.ico, .uis-fld-labelled-label);
+   what is here is only what the catalog has no control for: the sliders and the layout of the bars. */
+.work-colour { flex: 0 0 var(--work-drawer-h); height: var(--work-drawer-h); display: flex; flex-direction: column; gap: 8px; padding: 6px 10px; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+.work-colour { --wc-size: 70px; } /* the height of a group's picture: the wheel's diameter and the bars' travel are the same, so the two views are laid out identically */
+.wc-groups { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.wc-group { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.wc-group-head { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; }
+.wc-head .wc-pick { margin-right: 4px; }
+.wv-picking { cursor: crosshair; }
+/* The curves drawer (work view): the graph and the buttons of the four curves beside it. */
+.wc-curve-body { display: flex; align-items: flex-start; justify-content: center; gap: 14px; }
+.wc-curve-side { display: flex; flex-direction: column; gap: 6px; }
+.wch-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-top: 6px; }
+.wch-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 10px; border: 1px solid var(--uis-border); border-radius: 8px; background: transparent; color: var(--uis-text-dim); cursor: pointer; font: inherit; }
+.wch-tile:hover { color: var(--uis-text); }
+.wch-tile.active { color: var(--uis-accent); border-color: var(--uis-accent); background: color-mix(in srgb, var(--uis-accent) 12%, transparent); }
+.wch-label { font-size: 11px; max-width: 150px; line-height: 1.2; text-align: center; }
+.wc-head .wc-preset-label { margin-left: 24px; }
+.wc-head .wc-preset { width: 170px; flex: 0 0 auto; margin-left: 6px; }
+
+/* The text editor (work view): the bar above the picture, and over the picture one box per text - the place ffmpeg draws it. */
+.wv-text-font { flex: 0 1 150px; min-width: 100px; }
+.wv-texts { position: absolute; inset: 0; }
+.wv-text { position: absolute; outline: 1px dashed rgba(255, 255, 255, .55); cursor: move; user-select: none; }
+.wv-text::before { content: ""; position: absolute; left: -3px; top: -3px; width: 5px; height: 5px; background: #fff; border: 1px solid var(--uis-accent); }
+.wv-text-on { outline: 1px solid #fff; outline-offset: 1px; }
+.wv-text-grip { position: absolute; right: -5px; top: 50%; width: 8px; height: 18px; margin-top: -9px; border-radius: 3px; background: #fff; border: 1px solid var(--uis-accent); cursor: ew-resize; }
+.wv-text-words { flex: 1 1 160px; min-width: 120px; resize: none; font-family: inherit; }
+
+/* The command panel (work view): the ffmpeg command of the selected file under the list, selectable, with a copy button. */
+.wcmd { flex: 0 0 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 8px; border-top: 1px solid var(--uis-border); }
+.wcmd-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wcmd-title { font-size: 12px; font-weight: 600; color: var(--uis-accent, var(--uis-text-dim)); }
+.wcmd-text { max-height: 47px; overflow-y: auto; font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; user-select: text; padding: 4px 6px; border-radius: 6px; background: rgba(127, 127, 127, 0.12); }
+.wcmd-dim { color: var(--uis-text-dim); font-family: inherit; }
+
+.wfx-mixed { margin-left: 6px; opacity: 0.7; }
+.wc-mixed { opacity: 0.8; }
+.wv-picture-name { flex: 0 1 220px; min-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--uis-cmp-font, 12px); }
+.wl-mode { width: 220px; flex: 0 0 auto; margin-left: 8px; }
+.wl-unit { font-size: 11px; color: var(--uis-text-dim); flex: 0 0 auto; }
+.wl-switch { display: flex; align-items: center; gap: 6px; font-size: 12px; }

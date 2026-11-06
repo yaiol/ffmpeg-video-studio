@@ -98,6 +98,10 @@ pub struct Filter {
     /// The option that holds how many times faster the clip plays (a filter that changes the time): what the app divides the length by.
     #[serde(default)]
     pub speed: Option<String>,
+    /// The filter plays the clip faster or slower by its own (a sample rate relabelled): the picture is stretched to the new length of the
+    /// sound instead of being cut or extended.
+    #[serde(default)]
+    pub stretch: bool,
     #[serde(default)]
     pub options: Vec<FOption>,
 }
@@ -212,6 +216,10 @@ pub struct Effect {
     /// An effect whose work the app does itself, from what it measures of the file: which operation, and which control feeds each of its inputs.
     #[serde(default)]
     pub measure: Option<Measure>,
+    /// An effect the app draws with a widget of its own (a rectangle over the picture), not as a row of controls: which kind, and which
+    /// control of the effect feeds each of the widget's inputs. The widgets are the app's; the catalogue only names them.
+    #[serde(default)]
+    pub widget: Option<Widget>,
     #[serde(default)]
     pub controls: Vec<ControlDef>,
     #[serde(default)]
@@ -243,6 +251,15 @@ pub struct Effect {
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 pub struct Measure {
     pub op: String,
+    #[serde(default)]
+    pub controls: BTreeMap<String, String>,
+}
+
+/// How an effect is drawn when it has a widget: `kind` names the widget (the app has a fixed list), `controls` says which control of the
+/// effect holds each input of that widget (`rect`: `left`, `top`, `right`, `bottom`, the margins cut off each edge).
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
+pub struct Widget {
+    pub kind: String,
     #[serde(default)]
     pub controls: BTreeMap<String, String>,
 }
@@ -307,6 +324,9 @@ pub struct Step {
     pub filter: Option<String>,
     #[serde(default)]
     pub choice: Option<String>,
+    /// The step is left out while every control named here has this value (a rotation by 0 degrees is no filter at all).
+    #[serde(default)]
+    pub unless: Option<BTreeMap<String, Value>>,
     /// In the order the file gives them: it is the order they are written in.
     #[serde(default, rename = "with")]
     pub with: Ordered<With>,

@@ -1,20 +1,21 @@
 [package]
-name = "video-converter"
-version = "1.5.0"
+name = "ffmpeg-video-studio"
+version = "2.0.0"
 edition = "2024"
-description = "Video converter: drop files, pick a preset, convert. ffmpeg is the engine."
+description = "FFmpeg Video Studio: cut, grade, fade and convert video. ffmpeg is the engine."
 
 # Identity that is not a standard Cargo field. build.rs turns it into compile-time constants, so
 # the source carries no literal name (the analogue of reading package.json's productName).
 [package.metadata.yaiol]
-product-name = "Video Converter"
+product-name = "FFmpeg Video Studio"
 
 [dependencies]
+arboard = { version = "3.7.0", default-features = false }
 base64 = "0.23.1"
 dioxus = { version = "0.7.10", features = ["desktop"] }
 dioxus-free-icons = { version = "0.10.0", features = ["lucide"] }
 dirs = "7.0.0"
-engine = { package = "video-converter-engine", path = "../engine" }
+engine = { package = "ffmpeg-video-studio-engine", path = "../engine" }
 notify-rust = "4.18.2"
 num_cpus = "1.17.0"
 open = "5.4.4"

@@ -1,8 +1,8 @@
 /* ──────────────────────────────────────────────────────────────────────────
    Canonical "list within a view" styling — SHARED across all electron apps.
 
-   ⚠ SOURCE OF TRUTH: the shared catalog (assets/ui-listview.css)
-   This file is COPIED into each app's src/assets/ui-listview.css by sync-shared.js.
+   ⚠ SOURCE OF TRUTH: the shared catalog (assets/uis-listview.css)
+   This file is COPIED into each app's src/assets/uis-listview.css by sync-shared.js.
    NEVER edit the per-app copy — edit this file and re-sync.
 
    Any view that shows a vertical list of selectable rows (sidebars, pickers,
@@ -13,89 +13,100 @@
    in :root for BOTH themes (icoc/clch already do; ampl emits them from its JS
    theme in buildCss). Without them the list renders unstyled:
 
-     --accent       selection / active accent
-     --bg-row       base row background (the blend base for the active tint)
-     --bg-hov       hover background (base)
-     --text         primary text
-     --text-mute    secondary / subtitle text
-     --text-dim     dim text (badge)
-     --border       hairline borders
+     --uis-accent       selection / active accent
+     --uis-bg-row       base row background (the blend base for the active tint)
+     --uis-bg-hov       hover background (base)
+     --uis-text         primary text
+     --uis-text-mute    secondary / subtitle text
+     --uis-text-dim     dim text (badge)
+     --uis-border       hairline borders
 
    The look is identical to icons-cockpit's app-filter rail (the reference).
    ────────────────────────────────────────────────────────────────────────── */
 
 /* Scroll container for the list */
-.lv-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+.uis-lvw-scroll { flex: 1; min-height: 0; overflow-y: auto; }
 
 /* ── Group header band (grey, no caps, "(count)") ──────────────────────────
    The exact apps-cockpit set-header presentation. TWO markup forms share the
    band VISUALS so the look lives in one place:
-     • .lv-group-head            — a flex <button>, for list rails (icoc).
-     • tr.lv-group-row > td      — a table row cell, for data grids (apps-cockpit).
+     • .uis-lvw-group-head            — a flex <button>, for list rails (icoc).
+     • tr.uis-lvw-group-row > td      — a table row cell, for data grids (apps-cockpit).
    `display:flex` can't go on a <td> (it breaks table layout), so only the
    VISUALS are shared here; each form adds its own layout. */
-.lv-group-head,
-.lv-group-row > td {
+.uis-lvw-group-head,
+.uis-lvw-group-row > td {
   padding: 4px 10px;
   background: rgba(128, 128, 128, 0.13);
   border: none;
   border-top: 1px solid rgba(128, 128, 128, 0.30);
   border-bottom: 1px solid rgba(128, 128, 128, 0.30);
-  color: var(--text);
+  color: var(--uis-text);
   font-family: inherit; font-weight: 600;
   user-select: none;
 }
 /* Flex form (list rail) — its own layout on top of the shared band. */
-.lv-group-head {
+.uis-lvw-group-head {
   display: flex; align-items: center; gap: 8px;
   margin: 4px 0 2px;
   cursor: pointer; text-align: left;
 }
-.lv-group-name  { font-size: 12.5px; }
-.lv-group-count { font-size: 11px; opacity: 0.55; font-weight: 500; }
+.uis-lvw-group-name  { font-size: 12.5px; }
+.uis-lvw-group-count { font-size: 11px; opacity: 0.55; font-weight: 500; }
 
 /* ── Row ────────────────────────────────────────────────────────────────── */
-.lv-item {
+.uis-lvw-item {
   display: flex; align-items: center; gap: 8px; min-width: 0;
   width: 100%; text-align: left;
   padding: 6px 10px;
   background: transparent;
   border: 1px solid transparent; border-radius: 7px;
   cursor: pointer; font-family: inherit;
-  color: var(--text);
+  color: var(--uis-text);
   transition: background 0.12s, border-color 0.12s;
 }
-.lv-item:hover { background: var(--bg-hov); }
-.lv-item.active { background: color-mix(in srgb, var(--accent) 14%, var(--bg-row)); }
+.uis-lvw-item:hover { background: var(--uis-bg-hov); }
+.uis-lvw-item.active { background: color-mix(in srgb, var(--uis-accent) 14%, var(--uis-bg-row)); }
 
 /* Multi-line row (title + meta lines stacked) */
-.lv-item--stack { flex-direction: column; align-items: stretch; gap: 3px; }
+.uis-lvw-item--stack { flex-direction: column; align-items: stretch; gap: 3px; }
 
 /* Leading icon slot */
-.lv-item-icon { flex-shrink: 0; display: flex; align-items: center; }
-.lv-item svg { width: 14px; height: 14px; }   /* row icon sized by the control, not a size= prop */
+.uis-lvw-item-icon { flex-shrink: 0; display: flex; align-items: center; }
+.uis-lvw-item svg { width: 14px; height: 14px; }   /* row icon sized by the control, not a size= prop */
 
 /* Text body (single name, or name over subtitle) */
-.lv-item-body { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
-.lv-item-name {
-  font-size: 12.5px; font-weight: 500; color: var(--text);
+.uis-lvw-item-body { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.uis-lvw-item-name {
+  font-size: 12.5px; font-weight: 500; color: var(--uis-text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.lv-item.active .lv-item-name { color: var(--accent); font-weight: 600; }
-.lv-item.lv-item-muted:not(.active) .lv-item-name { color: var(--text-mute); }   /* a row with nothing in it yet (a language with no text): greyed out; the active row keeps its accent */
-.lv-item-sub {
-  font-size: 10.5px; color: var(--text-mute);
+.uis-lvw-item.active .uis-lvw-item-name { color: var(--uis-accent); font-weight: 600; }
+.uis-lvw-item.lv-item-muted:not(.active) .uis-lvw-item-name { color: var(--uis-text-mute); }   /* a row with nothing in it yet (a language with no text): greyed out; the active row keeps its accent */
+.uis-lvw-item-sub {
+  font-size: 10.5px; color: var(--uis-text-mute);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* Trailing count badge (pill) */
-.lv-item-badge {
+.uis-lvw-item-badge {
   flex-shrink: 0;
   font-size: 10px; font-weight: 700;
   border-radius: 20px; padding: 1px 6px;
-  background: var(--bg-row); color: var(--text-dim);
+  background: var(--uis-bg-row); color: var(--uis-text-dim);
 }
-.lv-item.active .lv-item-badge {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
+.uis-lvw-item.active .uis-lvw-item-badge {
+  background: color-mix(in srgb, var(--uis-accent) 18%, transparent);
+  color: var(--uis-accent);
+}
+
+/* .uis-lvw-reorder - a list whose rows are reordered by dragging: the whole row is the handle, the held one dims. */
+.uis-lvw-reorder .uis-lvw-item {
+  cursor: grab;
+  user-select: none;
+}
+
+.uis-lvw-reorder .uis-lvw-item.reordering {
+  opacity: 0.55;
+  cursor: grabbing;
 }

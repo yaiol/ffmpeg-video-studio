@@ -1,14 +1,14 @@
 [application]
-name = "Video Converter"
+name = "FFmpeg Video Studio"
 # The installer is generated straight into main/release (relative to this crate), not left nine
 # folders deep under target/.
 out_dir = "../release"
 
 [bundle]
-identifier = "com.yaiol.video-converter.app"
+identifier = "com.yaiol.ffmpeg-video-studio.app"
 publisher = "yaiol"
 icon = ["assets/app.png", "assets/app.ico", "assets/app.icns"]
-short_description = "Video converter: drop files, pick a preset, convert. ffmpeg is the engine."
+short_description = "FFmpeg Video Studio: cut, grade, fade and convert video."
 
 # Skip: the installer does not touch WebView2. dx's script runs Microsoft's bootstrapper on EVERY
 # install, with no check for an installed runtime - about a minute, for nothing, on a machine that

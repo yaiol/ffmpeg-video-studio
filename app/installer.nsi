@@ -9,7 +9,7 @@
 ; ⚠ CLAUDE: the display name is the one literal below. It is identity, so it is written from the
 ; birth certificate by the cockpit's app-info (and by the scaffolder) - never edit it by hand.
 ; Everything in double curly braces is dx's own template syntax, filled in at bundle time.
-!define PRODUCT_DISPLAY "Video Converter"
+!define PRODUCT_DISPLAY "FFmpeg Video Studio"
 
 !include "MUI2.nsh"
 !include "FileFunc.nsh"

@@ -1,5 +1,5 @@
-// twin: ui-news-dialog.jsx jsx@fea84a9985f2 rsx@92bc33fb136d
-//! NewsDialog — twin of `ui-news-dialog.jsx`: the ONE pop-up that shows yaiol news, in every app that
+// twin: uis-dlg-news.jsx jsx@238050b6332b rsx@46df1c92827b
+//! UisDlgNews — twin of `uis-dlg-news.jsx`: the ONE pop-up that shows yaiol news, in every app that
 //! shows news. Controlled and fetch-free:
 //!
 //!   `items`  - the announcements, or ONE update card (`kind == "update"`: the latest version and the notes of every release newer
@@ -16,13 +16,13 @@
 //!              again" box was ticked (the box belongs to the announcement being shown)
 //!
 //! An item whose title cannot be resolved is skipped; with none left the dialog renders nothing. Same
-//! classes and element order, so the `.dlp*` rules in `ui-app.css` skin it. Links open in the system
+//! classes and element order, so the `.uis-dlp*` rules in `uis-app.css` skin it. Links open in the system
 //! browser. Needs the app skeleton's `open` and `base64` crates (the logo is embedded the same way the
 //! settings page's is).
 //! Differs: behaviour none. Form only: the four words come from the app's own `crate::i18n` (like the settings page
 //! and the update banner) instead of a passed `t`; the logo is embedded as a data URL.
 
-use super::news_text::NewsText;
+use super::markdown_renderer::UisMarkdownRenderer;
 use crate::i18n;
 use dioxus::prelude::*;
 use dioxus_free_icons::{
@@ -41,7 +41,7 @@ static LOGO: LazyLock<String> = LazyLock::new(|| {
 
 /// One language's words of an announcement.
 #[derive(Clone, PartialEq, Default, Deserialize)]
-pub struct NewsLang {
+pub struct UisNewsLang {
     #[serde(default)]
     pub title: String,
     #[serde(default)]
@@ -55,10 +55,10 @@ pub struct NewsLang {
 
 /// One announcement, in the shape of the news feed: the words and the picture per language, and what is the same in every language.
 #[derive(Clone, PartialEq, Default, Deserialize)]
-pub struct NewsItem {
+pub struct UisNewsItem {
     pub id: String,
     #[serde(default)]
-    pub lang: BTreeMap<String, NewsLang>,
+    pub lang: BTreeMap<String, UisNewsLang>,
     #[serde(default)]
     pub link: Option<String>,
     /// "update" for a card of a new version; empty for an announcement.
@@ -72,17 +72,17 @@ pub struct NewsItem {
 }
 
 /// A card's title: an update's is the app's "new version" label and the version; an announcement's comes from its languages.
-fn card_title(it: &NewsItem, lang: &str, update_label: &str) -> String {
+fn card_title(it: &UisNewsItem, lang: &str, update_label: &str) -> String {
     if it.kind == "update" { format!("{update_label} v{}", it.version) } else { pick_news_field(&it.lang, lang, |l| &l.title) }
 }
 
-fn card_text(it: &NewsItem, lang: &str) -> String {
+fn card_text(it: &UisNewsItem, lang: &str) -> String {
     if it.kind == "update" { it.text.clone() } else { pick_news_field(&it.lang, lang, |l| &l.text) }
 }
 
 /// One field of an announcement in the reader's language: that language's own block, else its base language's,
 /// else English's - per FIELD, as the JSX's `pickNewsField`.
-pub fn pick_news_field(langs: &BTreeMap<String, NewsLang>, lang: &str, field: impl Fn(&NewsLang) -> &str) -> String {
+pub fn pick_news_field(langs: &BTreeMap<String, UisNewsLang>, lang: &str, field: impl Fn(&UisNewsLang) -> &str) -> String {
     let code = lang.replace('_', "-");
     let base = code.split('-').next().unwrap_or("");
     [code.as_str(), base, "en"]
@@ -110,7 +110,7 @@ pub fn news_image_url(raw: &str) -> String {
 }
 
 /// How long an announcement stays: 4 s plus 1 s per 3 words (about reading speed), kept between 5 s and 15 s.
-fn read_ms(it: &NewsItem, lang: &str, update_label: &str) -> u32 {
+fn read_ms(it: &UisNewsItem, lang: &str, update_label: &str) -> u32 {
     let words = [
         card_title(it, lang, update_label),
         pick_news_field(&it.lang, lang, |l| &l.subtitle),
@@ -123,8 +123,8 @@ fn read_ms(it: &NewsItem, lang: &str, update_label: &str) -> u32 {
 }
 
 #[component]
-pub fn NewsDialog(
-    items: Vec<NewsItem>,
+pub fn UisDlgNews(
+    items: Vec<UisNewsItem>,
     lang: String,
     on_close: EventHandler<Vec<String>>,
 ) -> Element {
@@ -140,7 +140,7 @@ pub fn NewsDialog(
     // Bumped whenever the turning timer is restarted or cancelled, so a sleeping one knows it is stale.
     let mut epoch = use_signal(|| 0u32);
 
-    let list: Vec<NewsItem> = items.into_iter().filter(|it| !card_title(it, &lang, &update_label).is_empty()).collect();
+    let list: Vec<UisNewsItem> = items.into_iter().filter(|it| !card_title(it, &lang, &update_label).is_empty()).collect();
     let count = list.len();
     // How long each card stays, worked out here so the timer below depends on plain numbers.
     let times: Vec<u32> = list.iter().map(|it| read_ms(it, &lang, &update_label)).collect();
@@ -195,12 +195,12 @@ pub fn NewsDialog(
 
     rsx! {
         div {
-            class: "dl-backdrop",
+            class: "uis-dl-backdrop",
             style: "z-index: 900",
             // Only a press on the backdrop itself closes: the dialog stops its own presses short of it.
             onmousedown: move |_| on_close.call(hide_ids()),
             div {
-                class: "dlp wide",
+                class: "uis-dlp wide",
                 onmousedown: move |e| e.stop_propagation(),
                 onkeydown: move |e| match e.key() {
                     Key::Escape => on_close.call(hide_ids()),
@@ -209,17 +209,17 @@ pub fn NewsDialog(
                     _ => {}
                 },
                 button {
-                    class: "dl-close",
+                    class: "uis-dl-close",
                     r#type: "button",
                     title: "{dismiss_tip}",
                     "aria-label": "{dismiss_tip}",
                     onclick: move |_| on_close.call(hide_ids()),
                     Icon { width: 16, height: 16, icon: LdX }
                 }
-                img { class: "dlp-icon", src: "{*LOGO}", alt: "yaiol" }
+                img { class: "uis-dlp-icon", src: "{*LOGO}", alt: "yaiol" }
                 // Every announcement is laid out in the SAME grid cell and only the current one is visible,
                 // so the dialog is as tall as the tallest one and never resizes when the carousel turns.
-                div { class: "dlp-pages",
+                div { class: "uis-dlp-pages",
                     for (i, it) in list.iter().enumerate() {
                         {
                             let (title, text) = (card_title(it, &lang, &update_label), card_text(it, &lang));
@@ -229,13 +229,13 @@ pub fn NewsDialog(
                             rsx! {
                                 div {
                                     key: "{it.id}",
-                                    class: if i == current { "dlp-page" } else { "dlp-page dlp-page-off" },
-                                    div { class: "dlp-title", "{title}" }
+                                    class: if i == current { "uis-dlp-page" } else { "uis-dlp-page uis-dlp-page-off" },
+                                    div { class: "uis-dlp-title", "{title}" }
                                     if !subtitle.is_empty() {
-                                        div { class: "dlp-subtitle", "{subtitle}" }
+                                        div { class: "uis-dlp-subtitle", "{subtitle}" }
                                     }
                                     if !image.is_empty() {
-                                        div { class: "dlp-image",
+                                        div { class: "uis-dlp-image",
                                             if !failed().contains(&it.id) {
                                                 img {
                                                     src: "{image}",
@@ -249,17 +249,17 @@ pub fn NewsDialog(
                                             }
                                         }
                                     }
-                                    div { class: "dlp-text", NewsText { text } }
+                                    div { class: "uis-dlp-text", UisMarkdownRenderer { text } }
                                 }
                             }
                         }
                     }
                 }
                 if count > 1 {
-                    div { class: "dlp-nav",
+                    div { class: "uis-dlp-nav",
                         button {
                             r#type: "button",
-                            class: "btn icon subtle",
+                            class: "uis-btn ico subtle",
                             onclick: move |_| choose(current as isize - 1),
                             Icon { width: 16, height: 16, icon: LdChevronLeft }
                         }
@@ -267,24 +267,24 @@ pub fn NewsDialog(
                             button {
                                 key: "{it.id}",
                                 r#type: "button",
-                                class: if i == current { "chip on" } else { "chip" },
+                                class: if i == current { "uis-chp on" } else { "uis-chp" },
                                 onclick: move |_| choose(i as isize),
                                 "{i + 1}"
                             }
                         }
                         button {
                             r#type: "button",
-                            class: "btn icon subtle",
+                            class: "uis-btn ico subtle",
                             onclick: move |_| choose(current as isize + 1),
                             Icon { width: 16, height: 16, icon: LdChevronRight }
                         }
                     }
                 }
-                div { class: "dlp-foot",
-                    label { class: "check-label",
+                div { class: "uis-dlp-foot",
+                    label { class: "uis-chk-lbl",
                         input {
                             r#type: "checkbox",
-                            class: "check-box",
+                            class: "uis-chk-box",
                             checked: hidden().contains(&item.id),
                             onchange: move |e| toggle_hidden(e.checked()),
                         }
@@ -293,7 +293,7 @@ pub fn NewsDialog(
                     if let Some(url) = link_for_click {
                         button {
                             r#type: "button",
-                            class: "btn primary",
+                            class: "uis-btn primary",
                             autofocus: true,
                             onclick: move |_| {
                                 let _ = open::that(&url);
@@ -303,7 +303,7 @@ pub fn NewsDialog(
                     }
                     button {
                         r#type: "button",
-                        class: "btn subtle",
+                        class: "uis-btn subtle",
                         autofocus: link.is_none(),
                         onclick: move |_| on_close.call(hide_ids()),
                         "{close_label}"
@@ -318,8 +318,8 @@ pub fn NewsDialog(
 mod tests {
     use super::*;
 
-    fn titles(pairs: &[(&str, &str)]) -> BTreeMap<String, NewsLang> {
-        pairs.iter().map(|(k, v)| (k.to_string(), NewsLang { title: v.to_string(), ..Default::default() })).collect()
+    fn titles(pairs: &[(&str, &str)]) -> BTreeMap<String, UisNewsLang> {
+        pairs.iter().map(|(k, v)| (k.to_string(), UisNewsLang { title: v.to_string(), ..Default::default() })).collect()
     }
 
     #[test]

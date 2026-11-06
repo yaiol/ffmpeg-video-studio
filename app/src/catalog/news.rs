@@ -1,4 +1,4 @@
-// twin: news.mjs jsx@0ad704456c67 rsx@7e8d4886b3b3
+// twin: news.mjs jsx@0ad704456c67 rsx@331f2464e1d0
 //! News — twin of `news.mjs`: what a yaiol app may show its user as news, and the per-MACHINE state that
 //! says whether to show any. Same feed, same rules, same state file as the electron apps.
 //!
@@ -24,7 +24,7 @@
 //! Differs: behaviour none. Form only: it is a module called directly, where the JSX side is the same rules behind
 //! HTTP routes on the app's local server; the user's local date is passed in (the standard library has no time zone).
 
-use super::news_dialog::{NewsItem, NewsLang};
+use super::dlg_news::{UisNewsItem, UisNewsLang};
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::{fs, path::PathBuf, time::Duration};
@@ -38,12 +38,12 @@ const READER_VERSION: u64 = 1;
 
 /// The per-machine news state.
 #[derive(Clone, PartialEq, Debug)]
-pub struct NewsState {
+pub struct UisNewsState {
     pub enabled: bool,
     pub dismissed: Vec<String>,
 }
 
-impl Default for NewsState {
+impl Default for UisNewsState {
     fn default() -> Self {
         Self { enabled: true, dismissed: Vec::new() }
     }
@@ -54,9 +54,9 @@ fn state_file() -> Option<PathBuf> {
 }
 
 /// The state out of its file's text. Anything but a clean object reads as the default.
-fn parse_state(text: &str) -> NewsState {
-    let Ok(raw) = serde_json::from_str::<Value>(text) else { return NewsState::default() };
-    NewsState {
+fn parse_state(text: &str) -> UisNewsState {
+    let Ok(raw) = serde_json::from_str::<Value>(text) else { return UisNewsState::default() };
+    UisNewsState {
         // only an explicit `false` turns news off
         enabled: raw.get("enabled") != Some(&Value::Bool(false)),
         dismissed: raw
@@ -67,11 +67,11 @@ fn parse_state(text: &str) -> NewsState {
     }
 }
 
-pub fn read_state() -> NewsState {
+pub fn read_state() -> UisNewsState {
     state_file().and_then(|f| fs::read_to_string(f).ok()).map(|t| parse_state(&t)).unwrap_or_default()
 }
 
-fn write_state(state: &NewsState) {
+fn write_state(state: &UisNewsState) {
     let Some(file) = state_file() else { return };
     let body = serde_json::json!({ "enabled": state.enabled, "dismissed": state.dismissed });
     let tmp = file.with_extension(format!("{}.tmp", std::process::id()));
@@ -155,20 +155,20 @@ fn is_expired(end: Option<&str>, today: &str) -> bool {
 }
 
 /// The `lang` object of an announcement: `{ language: { title, subtitle, text, image } }`. A block that is not an object is dropped.
-fn lang_map(v: Option<&Value>) -> BTreeMap<String, NewsLang> {
+fn lang_map(v: Option<&Value>) -> BTreeMap<String, UisNewsLang> {
     let field = |b: &Value, k: &str| b.get(k).and_then(Value::as_str).unwrap_or("").to_owned();
     v.and_then(Value::as_object)
         .map(|o| {
             o.iter()
                 .filter(|(_, b)| b.is_object())
-                .map(|(k, b)| (k.clone(), NewsLang { title: field(b, "title"), subtitle: field(b, "subtitle"), text: field(b, "text"), image: field(b, "image") }))
+                .map(|(k, b)| (k.clone(), UisNewsLang { title: field(b, "title"), subtitle: field(b, "subtitle"), text: field(b, "text"), image: field(b, "image") }))
                 .collect()
         })
         .unwrap_or_default()
 }
 
 /// The announcements of a feed that THIS app, today, with this state, should show.
-fn select(feed: &Value, state: &NewsState, app_id: &str, today: &str) -> Vec<NewsItem> {
+fn select(feed: &Value, state: &UisNewsState, app_id: &str, today: &str) -> Vec<UisNewsItem> {
     let Some(list) = feed.get("announcements").and_then(Value::as_array) else { return Vec::new() };
     list.iter()
         .filter_map(|a| {
@@ -181,7 +181,7 @@ fn select(feed: &Value, state: &NewsState, app_id: &str, today: &str) -> Vec<New
                 && !is_expired(a.get("end").and_then(Value::as_str), today)
                 && is_targeted(a.get("target"), app_id)
                 && lang.values().any(|l| !l.title.is_empty());
-            keep.then(|| NewsItem {
+            keep.then(|| UisNewsItem {
                 id: id.to_owned(),
                 lang,
                 link: a.get("link").and_then(Value::as_str).map(str::to_owned),
@@ -194,7 +194,7 @@ fn select(feed: &Value, state: &NewsState, app_id: &str, today: &str) -> Vec<New
 /// The card of an update: ONE card for `latest`, with the download page as its link. Its text is the notes of the
 /// release blocks of `releases` newer than `app_version`: a single one is just its notes, several are listed in file order
 /// (newest first) each under its own bold line. No notes at all still gives the card, with an empty text.
-fn update_cards(app_id: &str, app_version: &str, latest: &str, releases: Option<&Value>, code: &str) -> Vec<NewsItem> {
+fn update_cards(app_id: &str, app_version: &str, latest: &str, releases: Option<&Value>, code: &str) -> Vec<UisNewsItem> {
     let newer: Vec<(&str, &str, &str)> = releases
         .and_then(Value::as_array)
         .map(|list| {
@@ -213,7 +213,7 @@ fn update_cards(app_id: &str, app_version: &str, latest: &str, releases: Option<
             .collect::<Vec<_>>()
             .join("\n\n"),
     };
-    vec![NewsItem {
+    vec![UisNewsItem {
         id: format!("update:{app_id}:{latest}"),
         kind: "update".into(),
         version: latest.to_owned(),
@@ -224,7 +224,7 @@ fn update_cards(app_id: &str, app_version: &str, latest: &str, releases: Option<
 }
 
 /// A newer version of this app, as one card (none when up to date, dismissed, or offline). Not governed by the news switch.
-fn current_update(app_id: &str, app_version: &str, lang: &str, state: &NewsState) -> Vec<NewsItem> {
+fn current_update(app_id: &str, app_version: &str, lang: &str, state: &UisNewsState) -> Vec<UisNewsItem> {
     if std::env::var_os("YAIOL_DEV").is_some() || app_version.is_empty() {
         return Vec::new();
     }
@@ -248,7 +248,7 @@ fn current_update(app_id: &str, app_version: &str, lang: &str, state: &NewsState
 /// What to show now: first a new version (when `app_version` is given and a newer one is out), then the feed’s
 /// announcements that are live, targeted at `app_id` and not yet dismissed - none of them, and no request for
 /// them, when the news switch is off. Silent on every failure.
-pub fn current(app_id: &str, app_version: &str, lang: &str, today: &str) -> Vec<NewsItem> {
+pub fn current(app_id: &str, app_version: &str, lang: &str, today: &str) -> Vec<UisNewsItem> {
     let state = read_state();
     let mut items = current_update(app_id, app_version, lang, &state);
     if state.enabled
@@ -275,13 +275,13 @@ mod tests {
         ]})
     }
 
-    fn ids(items: &[NewsItem]) -> Vec<&str> {
+    fn ids(items: &[UisNewsItem]) -> Vec<&str> {
         items.iter().map(|i| i.id.as_str()).collect()
     }
 
     #[test]
     fn targeting_dates_and_titles() {
-        let s = NewsState::default();
+        let s = UisNewsState::default();
         assert_eq!(ids(&select(&feed(), &s, "lrc-editor", "2026-10-18")), ["a"]);
         assert_eq!(ids(&select(&feed(), &s, "markzen", "2026-10-18")), ["b"]);
         // the whole end day still counts, and a start day shows from its first moment
@@ -295,7 +295,7 @@ mod tests {
             { "id": "p", "lang": { "en": { "title": "P", "text": "T", "image": "p.en.png" }, "fr": { "title": "Pf", "subtitle": "S" }, "xx": "not a block" },
               "target": { "mode": "all-but", "apps": [] } },
         ]});
-        let items = select(&feed, &NewsState::default(), "lrc-editor", "2026-10-18");
+        let items = select(&feed, &UisNewsState::default(), "lrc-editor", "2026-10-18");
         assert_eq!(items[0].lang["en"].image, "p.en.png");
         assert_eq!(items[0].lang["fr"].subtitle, "S");
         assert_eq!(items[0].lang["en"].text, "T");
@@ -309,19 +309,19 @@ mod tests {
             { "id": "wip", "draft": true, "lang": { "en": { "title": "W" } }, "target": { "mode": "all-but", "apps": [] } },
             { "id": "notdraft", "draft": false, "lang": { "en": { "title": "N" } }, "target": { "mode": "all-but", "apps": [] } },
         ]});
-        assert_eq!(ids(&select(&feed, &NewsState::default(), "lrc-editor", "2026-10-18")), ["live", "notdraft"]);
+        assert_eq!(ids(&select(&feed, &UisNewsState::default(), "lrc-editor", "2026-10-18")), ["live", "notdraft"]);
     }
 
     #[test]
     fn dismissed_ids_stay_hidden() {
-        let s = NewsState { enabled: true, dismissed: vec!["a".into()] };
+        let s = UisNewsState { enabled: true, dismissed: vec!["a".into()] };
         assert!(select(&feed(), &s, "lrc-editor", "2026-10-18").is_empty());
     }
 
     #[test]
     fn state_file_is_read_tolerantly() {
-        assert_eq!(parse_state("{}"), NewsState::default());
-        assert_eq!(parse_state("not json"), NewsState::default());
+        assert_eq!(parse_state("{}"), UisNewsState::default());
+        assert_eq!(parse_state("not json"), UisNewsState::default());
         assert!(!parse_state(r#"{"enabled":false}"#).enabled);
         assert!(parse_state(r#"{"enabled":0}"#).enabled);
         assert_eq!(parse_state(r#"{"dismissed":["x",1,"y"]}"#).dismissed, ["x", "y"]);
@@ -340,7 +340,7 @@ mod tests {
         for (k, v) in extra.as_object().unwrap() {
             a[k] = v.clone();
         }
-        !select(&serde_json::json!({ "announcements": [a] }), &NewsState::default(), "lrc-editor", "2026-10-18").is_empty()
+        !select(&serde_json::json!({ "announcements": [a] }), &UisNewsState::default(), "lrc-editor", "2026-10-18").is_empty()
     }
 
     #[test]

@@ -1,5 +1,5 @@
-// twin: ui-header.jsx jsx@ee3a37c52cdd rsx@69523206cd68
-//! AppHeader — twin of `ui-header.jsx`: app name, version badge, children, then the 2px gradient identity
+// twin: uis-header.jsx jsx@5c98efa34454 rsx@09afcab5f2ab
+//! UisAppHeader — twin of `uis-header.jsx`: app name, version badge, children, then the 2px gradient identity
 //! separator, then an OPTIONAL sub-bar (a tag / filter strip) below it - so the order is always
 //! "header buttons -> separator -> optional sub-bar".
 //! Differs: none.
@@ -7,7 +7,7 @@
 use dioxus::prelude::*;
 
 #[component]
-pub fn AppHeader(
+pub fn UisAppHeader(
     app_name: String,
     app_version: String,
     /// The strip below the separator; omit when there is none.
@@ -16,14 +16,14 @@ pub fn AppHeader(
     children: Element,
 ) -> Element {
     rsx! {
-        div { class: "barh-header",
-            span { class: "barh-app-name", "{app_name}" }
-            span { class: "barh-app-version", "v{app_version}" }
+        div { class: "uis-barh-header",
+            span { class: "uis-barh-app-name", "{app_name}" }
+            span { class: "uis-barh-app-version", "v{app_version}" }
             {children}
         }
-        div { class: "barh-gradient" }
+        div { class: "uis-barh-gradient" }
         if let Some(bar) = sub_bar {
-            div { class: "barh-subbar", {bar} }
+            div { class: "uis-barh-subbar", {bar} }
         }
     }
 }
