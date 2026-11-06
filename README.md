@@ -23,6 +23,8 @@
   <span>&nbsp;·&nbsp;</span>
   <a href="#install">Install</a>
   <span>&nbsp;·&nbsp;</span>
+  <a href="#effects">Effects</a>
+  <span>&nbsp;·&nbsp;</span>
   <a href="#what-it-is">Features</a>
   <span>&nbsp;·&nbsp;</span>
   <a href="#documentation">Documentation</a>
@@ -76,16 +78,32 @@
 
 ## What it is
 
-FFmpeg Video Studio is a graphical studio on top of ffmpeg. The **work view** opens first: one video at a time, with a picture you can play with its sound, a film strip and a sound band for a timeline, a cut set with two buttons, fades you drag, and drawers for colour, curves, crop, texts and the sound. The **batch view** converts many files at once, each with its own settings.
+FFmpeg Video Studio is a graphical studio on top of ffmpeg, with two views, chosen by the first two buttons of the header:
 
-What sets it apart is that the choices are kept separate: the **preset** (how the video is encoded), the **size**, the **audio**, the **tags**, the **effects** and the **trim** are each chosen on their own, so one preset serves every combination. ffmpeg is not hidden: a panel shows the exact command that will run, and a button copies it.
+- **The work view (the studio)** opens first. One video at a time: a picture you can play with its sound, a film strip and a sound band for a timeline, a cut set with two buttons, fades you drag, and drawers for colour, curves, crop and rotate, texts, watermarks and the sound. You see and hear what the conversion will make before you make it.
+- **The batch view** converts many files at once: add files or whole folders and convert them, each with its own settings.
+
+In both views the choices are kept separate: the **preset** (how the video is encoded), the **size**, the **audio**, the **tags**, the **effects** and the **trim** are each chosen on their own, so one preset serves every combination. ffmpeg is not hidden: a panel shows the exact command that will run, and a button copies it.
+
+---
+
+## Effects
+
+Effects are what is done to the picture and to the sound, and they are the heart of the studio. There are two lists, **Video Effects** and **Audio Effects**, and they work in both views.
+
+- **Standard effects as switches.** The work view lists the effects most people need as rows you switch on and off while the video plays. For the picture: crop and rotate as one frame you drag over the image, colour grading with wheels or bars, curves, texts and watermarks as boxes you place on the picture, and the picture fade. For the sound: trim silence, keep a range, channels, equaliser, compressor, the four ways to set the volume, fades, silence at the end and ReplayGain tags. Several have a drawer of their own under the picture.
+- **Every ffmpeg filter, on top.** The **Add an effect** menu offers all of ffmpeg's video and audio filters, grouped by category and searchable by name, each with ordinary controls generated from the filter itself: times such as 1:30, a colour picker, a chooser for files and folders, and a button that puts a value back to its default. Which effects the work view lists ready to switch on is your choice in Settings.
+- **You set the order.** Effects run from the top of the list to the bottom as one ffmpeg filter chain; drag a card to change the result. A line warns when an effect counts on something a later one changes, and the app never reorders your list.
+- **The sound follows the picture.** A change of tempo or a cut in the sound is followed by the picture so the two stay the same length.
+- **Saved lists for the batch.** In the batch view an effects entry is a named list kept in Settings and chosen from a drop-down, so one entry goes with any preset.
 
 ---
 
 ## Features
 
+- **A work view and a batch view** - work on one video with its timeline, or convert a whole folder at once.
 - **Hear and see the result** - playback is real ffmpeg with your effects applied, with the sound; the part outside the cut is dimmed on a film strip, and fades are two handles on the timeline.
-- **Video Effects and Audio Effects** - ffmpeg's own filters as a searchable catalogue with ordinary controls, plus standard effects as switches: crop and rotate, colour grading with wheels or bars, curves, texts and watermarks as boxes on the picture, and for the sound an equaliser, a compressor, channels, level and loudness, fades and ReplayGain tags.
+- **Video Effects and Audio Effects** - standard effects as switches, every ffmpeg filter in a menu, in an order you choose (see above).
 - **Presets** - MKV, MP4, WebM, MOV and AVI with H.264, H.265, AV1, VP9, ProRes, uncompressed RGB or a straight copy; a quality number or a target bitrate, a speed, 10-bit, tunes and extra x265 parameters.
 - **A graphics card when it helps** - NVIDIA, AMD or Intel encoders, chosen as a setting. The app tests which ones work on your computer and falls back to the processor when a preset cannot use a card.
 - **Tags and chapters** - keep everything except a list of names, or remove everything except a list, with wildcards; chapters have their own switch.
