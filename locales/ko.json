@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "설정 열기",
+  "tipWinMinimize": "최소화",
+  "tipWinMaximize": "최대화",
+  "tipWinRestore": "복원",
+  "tipWinClose": "닫기",
   "tipHdrBatch": "일괄: 사전 설정으로 여러 파일 변환",
   "tipHdrWork": "작업: 한 번에 한 파일",
   "tipHdrHelp": "도움말",

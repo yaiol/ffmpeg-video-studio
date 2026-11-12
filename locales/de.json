@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Einstellungen öffnen",
+  "tipWinMinimize": "Minimieren",
+  "tipWinMaximize": "Maximieren",
+  "tipWinRestore": "Wiederherstellen",
+  "tipWinClose": "Schließen",
   "tipHdrBatch": "Stapel: viele Dateien mit Voreinstellungen konvertieren",
   "tipHdrWork": "Arbeit: eine Datei nach der anderen",
   "tipHdrHelp": "Hilfe",

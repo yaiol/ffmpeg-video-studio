@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Открыть настройки",
+  "tipWinMinimize": "Свернуть",
+  "tipWinMaximize": "Развернуть",
+  "tipWinRestore": "Восстановить",
+  "tipWinClose": "Закрыть",
   "tipHdrBatch": "Пакет: конвертировать много файлов с пресетами",
   "tipHdrWork": "Работа: один файл за раз",
   "tipHdrHelp": "Справка",

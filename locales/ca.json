@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Obre la configuració",
+  "tipWinMinimize": "Minimitza",
+  "tipWinMaximize": "Maximitza",
+  "tipWinRestore": "Restaura",
+  "tipWinClose": "Tanca",
   "tipHdrBatch": "Processament per lots: converteix molts fitxers amb preajustos",
   "tipHdrWork": "Treball: un fitxer a la vegada",
   "tipHdrHelp": "Ajuda",

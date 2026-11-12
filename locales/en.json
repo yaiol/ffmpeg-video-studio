@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Open settings",
+  "tipWinMinimize": "Minimize",
+  "tipWinMaximize": "Maximize",
+  "tipWinRestore": "Restore",
+  "tipWinClose": "Close",
   "tipHdrBatch": "Batch: convert many files with presets",
   "tipHdrWork": "Work: one file at a time",
   "tipHdrHelp": "Help",

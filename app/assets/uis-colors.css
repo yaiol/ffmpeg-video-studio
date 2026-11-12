@@ -74,7 +74,7 @@
   --uis-bg-hov:          #232634;           /* base — body/list hover */
   --uis-bg-input:        #1f1f1f;           /* [GUI Standard: editable-field background — ampl reference] */
 
-  --uis-bar-bgd:         #0d0d14;           /* @palette live=#0d0d14 debug=#ff1493 */
+  --uis-bar-bgd:         #1a1a1a;           /* @palette live=#1a1a1a debug=#ff1493 */
   --uis-bar-inp:         #1f1f1f;           /* @palette live=#1f1f1f debug=#ffb6c1 */
   --uis-bar-hov:         #232634;           /* @palette live=#232634 debug=#ff8c00 */
 

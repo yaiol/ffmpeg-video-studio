@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Atidaryti nustatymus",
+  "tipWinMinimize": "Mažinti",
+  "tipWinMaximize": "Didinti",
+  "tipWinRestore": "Atkurti",
+  "tipWinClose": "Uždaryti",
   "tipHdrBatch": "Paketas: konvertuoti daug failų su išankstiniais nustatymais",
   "tipHdrWork": "Darbas: po vieną failą",
   "tipHdrHelp": "Pagalba",

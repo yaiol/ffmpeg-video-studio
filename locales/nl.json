@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Instellingen openen",
+  "tipWinMinimize": "Minimaliseren",
+  "tipWinMaximize": "Maximaliseren",
+  "tipWinRestore": "Herstellen",
+  "tipWinClose": "Sluiten",
   "tipHdrBatch": "Batch: converteer veel bestanden met voorinstellingen",
   "tipHdrWork": "Werk: één bestand tegelijk",
   "tipHdrHelp": "Hulp",

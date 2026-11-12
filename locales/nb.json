@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Åpne innstillinger",
+  "tipWinMinimize": "Minimer",
+  "tipWinMaximize": "Maksimer",
+  "tipWinRestore": "Gjenopprett",
+  "tipWinClose": "Lukk",
   "tipHdrBatch": "Batch: konverter mange filer med forhåndsinnstillinger",
   "tipHdrWork": "Arbeid: én fil om gangen",
   "tipHdrHelp": "Hjelp",

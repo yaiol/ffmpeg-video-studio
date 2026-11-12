@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Buksan ang mga setting",
+  "tipWinMinimize": "Paliitin",
+  "tipWinMaximize": "Palakihin",
+  "tipWinRestore": "Ibalik",
+  "tipWinClose": "Isara",
   "tipHdrBatch": "Batch: i-convert ang maraming file gamit ang mga preset",
   "tipHdrWork": "Trabaho: isang file sa bawat pagkakataon",
   "tipHdrHelp": "Tulong",

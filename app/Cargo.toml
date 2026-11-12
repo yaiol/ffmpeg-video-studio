@@ -1,6 +1,6 @@
 [package]
 name = "ffmpeg-video-studio"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2024"
 description = "FFmpeg Video Studio: cut, grade, fade and convert video. ffmpeg is the engine."
 
@@ -24,6 +24,11 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 tokio = { version = "1.53.2", features = ["rt"] }
 ureq = { version = "3.4.2", features = ["json"] }
+
+# The system's own window menu, opened from the app's window bar (src/window_menu.rs), and the system's
+# title-bar colour, which the bar follows (src/window_accent.rs).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Registry", "Win32_UI_WindowsAndMessaging"] }
 
 [build-dependencies]
 toml = "1.1.8"

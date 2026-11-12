@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Отвори настройки",
+  "tipWinMinimize": "Минимизиране",
+  "tipWinMaximize": "Максимизиране",
+  "tipWinRestore": "Възстановяване",
+  "tipWinClose": "Затваряне",
   "tipHdrBatch": "Пакетно: конвертирайте много файлове с предварителни настройки",
   "tipHdrWork": "Работа: един файл наведнъж",
   "tipHdrHelp": "Помощ",

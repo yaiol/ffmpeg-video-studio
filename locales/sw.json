@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Fungua mipangilio",
+  "tipWinMinimize": "Punguza",
+  "tipWinMaximize": "Ongeza",
+  "tipWinRestore": "Rejesha",
+  "tipWinClose": "Funga",
   "tipHdrBatch": "Kundi: badilisha faili nyingi kwa mipangilio",
   "tipHdrWork": "Kazi: faili moja kwa wakati mmoja",
   "tipHdrHelp": "Msaada",

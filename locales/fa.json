@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "باز کردن تنظیمات",
+  "tipWinMinimize": "کوچک‌نمایی",
+  "tipWinMaximize": "بزرگ‌نمایی",
+  "tipWinRestore": "بازیابی",
+  "tipWinClose": "بستن",
   "tipHdrBatch": "دسته‌ای: تبدیل چندین فایل با تنظیمات از پیش تعیین‌شده",
   "tipHdrWork": "کار: یک فایل در هر زمان",
   "tipHdrHelp": "راهنما",

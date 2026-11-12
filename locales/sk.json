@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Otvoriť nastavenia",
+  "tipWinMinimize": "Minimalizovať",
+  "tipWinMaximize": "Maximalizovať",
+  "tipWinRestore": "Obnoviť",
+  "tipWinClose": "Zavrieť",
   "tipHdrBatch": "Dávka: konvertujte mnoho súborov s predvoľbami",
   "tipHdrWork": "Práca: jeden súbor naraz",
   "tipHdrHelp": "Pomoc",

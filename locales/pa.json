@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "ਸੈਟਿੰਗਾਂ ਖੋਲ੍ਹੋ",
+  "tipWinMinimize": "ਛੋਟਾ ਕਰੋ",
+  "tipWinMaximize": "ਵੱਡਾ ਕਰੋ",
+  "tipWinRestore": "ਬਹਾਲ ਕਰੋ",
+  "tipWinClose": "ਬੰਦ ਕਰੋ",
   "tipHdrBatch": "ਬੈਚ: ਪ੍ਰੀਸੈੱਟਾਂ ਨਾਲ ਕਈ ਫਾਈਲਾਂ ਨੂੰ ਬਦਲੋ",
   "tipHdrWork": "ਕੰਮ: ਇੱਕ ਵਾਰ ਵਿੱਚ ਇੱਕ ਫਾਈਲ",
   "tipHdrHelp": "ਮਦਦ",

@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Բացել կարգավորումները",
+  "tipWinMinimize": "Փոքրացնել",
+  "tipWinMaximize": "Մեծացնել",
+  "tipWinRestore": "Վերականգնել",
+  "tipWinClose": "Փակել",
   "tipHdrBatch": "Խմբաքանակ: փոխակերպել բազմաթիվ ֆայլեր նախադրվածներով",
   "tipHdrWork": "Աշխատանք: մեկ ֆայլ միաժամանակ",
   "tipHdrHelp": "Օգնություն",

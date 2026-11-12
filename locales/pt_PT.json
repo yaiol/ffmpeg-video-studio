@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Abrir definições",
+  "tipWinMinimize": "Minimizar",
+  "tipWinMaximize": "Maximizar",
+  "tipWinRestore": "Restaurar",
+  "tipWinClose": "Fechar",
   "tipHdrBatch": "Lote: converter muitos ficheiros com predefinições",
   "tipHdrWork": "Trabalho: um ficheiro de cada vez",
   "tipHdrHelp": "Ajuda",

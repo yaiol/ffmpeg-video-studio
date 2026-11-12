@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Buka pengaturan",
+  "tipWinMinimize": "Minimalkan",
+  "tipWinMaximize": "Maksimalkan",
+  "tipWinRestore": "Pulihkan",
+  "tipWinClose": "Tutup",
   "tipHdrBatch": "Batch: konversi banyak file dengan preset",
   "tipHdrWork": "Kerja: satu file pada satu waktu",
   "tipHdrHelp": "Bantuan",

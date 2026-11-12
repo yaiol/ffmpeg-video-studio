@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "開啟設定",
+  "tipWinMinimize": "最小化",
+  "tipWinMaximize": "最大化",
+  "tipWinRestore": "還原",
+  "tipWinClose": "關閉",
   "tipHdrBatch": "批次: 使用預設轉換多個檔案",
   "tipHdrWork": "工作: 一次處理一個檔案",
   "tipHdrHelp": "說明",

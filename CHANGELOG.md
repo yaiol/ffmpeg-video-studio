@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1 — 2026-11-13
+
+- The app draws its own title bar: the app icon, then Settings, Help and GitHub at its start, the name and version in the middle, and minimize, maximize and close at its end; the header under it keeps only the view and file buttons
+- On Windows the title bar follows the system's title-bar colour, and a right-click on it (or a click on its icon) opens the system's window menu
+- The ffmpeg manifest is read from https://apps.yaiol.com/data/ffmpeg.json
+- README rewritten, with a logo and a screenshot
+
 ## 2.0.0 — 2026-11-06
 
 - The app is renamed FFmpeg Video Studio (it was Video Converter); the installer, the Start menu entry and the settings folder carry the new name

@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Odpri nastavitve",
+  "tipWinMinimize": "Pomanjšaj",
+  "tipWinMaximize": "Povečaj",
+  "tipWinRestore": "Obnovi",
+  "tipWinClose": "Zapri",
   "tipHdrBatch": "Paketno: pretvorite veliko datotek s prednastavitvami",
   "tipHdrWork": "Delo: ena datoteka naenkrat",
   "tipHdrHelp": "Pomoč",

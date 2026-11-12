@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Beállítások megnyitása",
+  "tipWinMinimize": "Kis méret",
+  "tipWinMaximize": "Teljes méret",
+  "tipWinRestore": "Visszaállítás",
+  "tipWinClose": "Bezárás",
   "tipHdrBatch": "Kötegelt: sok fájl konvertálása előbeállításokkal",
   "tipHdrWork": "Munka: egy fájl egyszerre",
   "tipHdrHelp": "Súgó",

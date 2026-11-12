@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Bude saituna",
+  "tipWinMinimize": "Rage girma",
+  "tipWinMaximize": "Ƙara girma",
+  "tipWinRestore": "Maido",
+  "tipWinClose": "Rufe",
   "tipHdrBatch": "Batch: canza fayiloli da yawa tare da saituna",
   "tipHdrWork": "Aiki: fayil ɗaya a lokaci guda",
   "tipHdrHelp": "Taimako",

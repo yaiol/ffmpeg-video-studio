@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "ترتیبات کھولیں",
+  "tipWinMinimize": "چھوٹا کریں",
+  "tipWinMaximize": "بڑا کریں",
+  "tipWinRestore": "بحال کریں",
+  "tipWinClose": "بند کریں",
   "tipHdrBatch": "بیچ: پری سیٹس کے ساتھ کئی فائلیں تبدیل کریں",
   "tipHdrWork": "کام: ایک وقت میں ایک فائل",
   "tipHdrHelp": "مدد",

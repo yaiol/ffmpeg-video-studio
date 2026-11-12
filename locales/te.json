@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "సెట్టింగ్‌లను తెరవండి",
+  "tipWinMinimize": "చిన్నది చేయి",
+  "tipWinMaximize": "పెద్దది చేయి",
+  "tipWinRestore": "పునరుద్ధరించు",
+  "tipWinClose": "మూసివేయి",
   "tipHdrBatch": "బ్యాచ్: ప్రీసెట్‌లతో అనేక ఫైల్‌లను మార్చండి",
   "tipHdrWork": "పని: ఒకేసారి ఒక ఫైల్",
   "tipHdrHelp": "సహాయం",

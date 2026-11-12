@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "เปิดการตั้งค่า",
+  "tipWinMinimize": "ย่อ",
+  "tipWinMaximize": "ขยาย",
+  "tipWinRestore": "คืนค่า",
+  "tipWinClose": "ปิด",
   "tipHdrBatch": "แบตช์: แปลงหลายไฟล์ด้วยค่าที่ตั้งไว้ล่วงหน้า",
   "tipHdrWork": "งาน: ทีละหนึ่งไฟล์",
   "tipHdrHelp": "วิธีใช้",

@@ -557,6 +557,8 @@ button.uis-chp:hover { opacity: .8; }
    bars read the same tokens (`gap: var(--uis-header-gap)`), never a re-typed literal. */
 :root {
   --uis-header-gap:    8px;   /* header bar  — between logo / search / button-groups */
+  --uis-header-side:   16px;  /* header bar + its sub-bar — the margin at each end. An app with a window bar sets its own (uis-bar-window.css) */
+  --uis-header-pad:    10px;  /* header bar — the margin above and below its controls. An app with a window bar sets its own (uis-bar-window.css) */
   --uis-footer-gap:    8px;   /* footer bar  — between controls */
   --uis-statusbar-gap: 8px;   /* status strip — between info items */
 }
@@ -566,10 +568,13 @@ button.uis-chp:hover { opacity: .8; }
    the separator, not under it. No border — the 2px gradient bar (Rule 10) is the separator. */
 .uis-barh-header {
   display: flex; align-items: center; flex-wrap: wrap; gap: var(--uis-header-gap);
-  padding: 10px 16px;
+  padding: var(--uis-header-pad) var(--uis-header-side);
   background: var(--uis-bar-bgd);
   position: sticky; top: 0; z-index: 20;
 }
+/* A header with nothing in it is not drawn: an app whose window bar shows the name and the version, and which
+   has no work button, would otherwise show an empty strip. The identity line below it stays. */
+.uis-barh-header:empty { display: none; }
 
 /* App name — plain bold text (unscoped from .uis-barh-header so JS-theme inline headers get it too). */
 .uis-barh-app-name {
@@ -591,13 +596,16 @@ button.uis-chp:hover { opacity: .8; }
   flex-shrink: 0;
   position: sticky; top: 48px; z-index: 10;
 }
+/* Under a header that is not drawn, the line has no header to stay below: without this its 48px sticky
+   offset pushes it down over the first rows of the content. */
+.uis-barh-header:empty + .uis-barh-gradient { top: auto; }
 
 /* Header sub-bar (optional, BELOW the identity separator) — a secondary strip (tag / filter bar)
    from AppHeader's `subBar` slot. Same surface + gaps as the header, so the two read as one unit
    split by the gradient. flex-wrap so a long tag list flows onto more rows. Seed: ampl. */
 .uis-barh-subbar {
   display: flex; align-items: center; flex-wrap: wrap; gap: var(--uis-header-gap);
-  padding: 6px 16px;
+  padding: 6px var(--uis-header-side);
   background: var(--uis-bar-bgd);
   flex-shrink: 0;
 }

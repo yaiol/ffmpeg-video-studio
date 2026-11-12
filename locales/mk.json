@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Отвори поставки",
+  "tipWinMinimize": "Минимизирај",
+  "tipWinMaximize": "Максимизирај",
+  "tipWinRestore": "Врати",
+  "tipWinClose": "Затвори",
   "tipHdrBatch": "Сериски: конвертирајте многу датотеки со претходни поставки",
   "tipHdrWork": "Работа: една датотека во исто време",
   "tipHdrHelp": "Помош",

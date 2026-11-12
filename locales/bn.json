@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "সেটিংস খুলুন",
+  "tipWinMinimize": "ছোট করুন",
+  "tipWinMaximize": "বড় করুন",
+  "tipWinRestore": "পুনরুদ্ধার করুন",
+  "tipWinClose": "বন্ধ করুন",
   "tipHdrBatch": "ব্যাচ: প্রিসেট সহ অনেক ফাইল রূপান্তর করুন",
   "tipHdrWork": "কাজ: একবারে একটি ফাইল",
   "tipHdrHelp": "সাহায্য",

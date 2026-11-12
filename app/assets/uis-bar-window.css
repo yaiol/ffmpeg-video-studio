@@ -1,0 +1,80 @@
+/* uis-bar-window.css - the WINDOW BAR: the app's own title bar, drawn by the app in place of the system's.
+   Paired with uis-bar-window.jsx (and its rsx twin); lives apart from uis-app.css because only an app whose
+   window has no system frame draws it.
+
+   One thin row, three zones: the app-wide buttons at the start, the app name and version in the middle (always
+   the middle of the WINDOW, whatever the two sides hold), the three window buttons at the end.
+
+   The bar is the handle that moves the window. In Electron that is the `app-region` property below, and
+   whatever must stay clickable opts out of it. A Rust WebView ignores the property; its twin starts the move
+   from the press itself. */
+/* An app that has a window bar has a tighter header under it (owner, 2026-11-10), through the header's own tokens:
+   - the side margin, which the window bar, the header and the sub-bar all read: 6px instead of 16px;
+   - the margin above and below the header's controls: 8px instead of 10px (the header is 46px high, not 50). */
+/* THE BAR'S COLOUR CAN COME FROM THE APP (colour only, never shape): an app that follows the system's title-bar
+   colour sets three custom properties on the page and removes them to return to the look below.
+     --uis-win-bar-bgd   the bar's background (the system's accent colour)
+     --uis-win-bar-text  the name, the version pill and the buttons on it (light or dark, chosen for that background)
+     --uis-win-bar-hov   a button's background under the pointer and when it is on
+   Nothing set = the bar's own colours. */
+:root:has(.uis-barh-window) { --uis-header-side: 6px; --uis-header-pad: 8px; }
+
+.uis-barh-window {
+  --uis-s-inp: var(--uis-bar-inp); --uis-s-hov: var(--uis-bar-hov);
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  height: 32px; flex-shrink: 0;
+  padding: 0 var(--uis-header-side);   /* the header's own side margin: the two rows' first buttons line up */
+  /* The bar's own colour, when the app gives none (owner, 2026-11-12, on trial): #fdfdfd on the light theme,
+     #0d0d14 on the dark one - a step away from the header under it (--uis-bar-bgd) so the two rows can be told apart. */
+  background: var(--uis-win-bar-bgd, var(--uis-win-bar-own));
+  --uis-win-bar-own: #fdfdfd;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+:root[data-theme="dark"] .uis-barh-window { --uis-win-bar-own: #0d0d14; }
+
+/* Start zone - the app's icon, then the app-wide buttons (settings, help, source). End zone - minimize,
+   maximize / restore, close. The two button rows are mirror images: the same button, the same spacing (the
+   buttons touch). The zones themselves stay part of the handle; only a BUTTON opts out of it. */
+.uis-barh-window-start, .uis-barh-window-acts, .uis-barh-window-ctl { display: flex; align-items: center; }
+.uis-barh-window-start { justify-self: start; gap: var(--uis-header-gap); }
+.uis-barh-window-ctl   { justify-self: end; }
+
+/* The app's icon, where a system title bar shows it. It is part of the handle: it moves the window, and a
+   right-click on it (as anywhere on the bar) opens the system's own window menu. */
+.uis-barh-window-icon { width: 16px; height: 16px; flex-shrink: 0; -webkit-user-drag: none; }
+
+/* Middle zone - the name and the version pill. The pill is the header's own (.uis-barh-app-version: one shape,
+   one class). The NAME is the bar's own, smaller than the header's 17px .uis-barh-app-name: a thin bar holds a
+   title, not a headline (owner, 2026-11-10). */
+.uis-barh-window-title {
+  display: flex; align-items: center; gap: var(--uis-header-gap);
+  justify-self: center;
+  min-width: 0;
+}
+.uis-barh-window-name {
+  font-size: 13px; font-weight: 600;
+  color: var(--uis-win-bar-text, var(--uis-text)); white-space: nowrap;
+}
+/* The version pill keeps its shape (the pill base); on a bar the app has coloured it takes the bar's text colour,
+   since the identity accent may not be readable on it. */
+.uis-barh-window .uis-barh-app-version { border-color: var(--uis-win-bar-text, var(--uis-accent)); color: var(--uis-win-bar-text, var(--uis-accent)); }
+
+/* THE window-bar button - ONE shape for every button of the bar, both sides (owner, 2026-11-10): a flat 20px
+   square with a 12px icon, no frame, no radius, no line between two of them. A look of its own, decided apart
+   from the header's buttons (never a .uis-btn variant, never in a .uis-barh-grp). */
+.uis-barh-window-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  padding: 0; border: 0; border-radius: 0;
+  background: transparent; color: var(--uis-win-bar-text, var(--uis-text-dim));
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  -webkit-app-region: no-drag;
+}
+.uis-barh-window-btn > svg { flex-shrink: 0; width: 12px; height: 12px; }
+.uis-barh-window-btn:hover { background: var(--uis-win-bar-hov, var(--uis-s-hov)); color: var(--uis-win-bar-text, var(--uis-text)); }
+/* On (the settings page is open): the same accent tint every active button carries. */
+.uis-barh-window-btn.active { color: var(--uis-win-bar-text, var(--uis-accent)); background: var(--uis-win-bar-hov, color-mix(in srgb, var(--uis-accent) 14%, transparent)); }
+/* Close warns: the one window button that cannot be undone. */
+.uis-barh-window-btn.close:hover { background: var(--uis-danger); color: #fff; }

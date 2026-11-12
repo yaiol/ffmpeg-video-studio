@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Avaa asetukset",
+  "tipWinMinimize": "Pienennä",
+  "tipWinMaximize": "Suurenna",
+  "tipWinRestore": "Palauta",
+  "tipWinClose": "Sulje",
   "tipHdrBatch": "Erä: muunna monta tiedostoa esiasetuksilla",
   "tipHdrWork": "Työ: yksi tiedosto kerrallaan",
   "tipHdrHelp": "Ohje",

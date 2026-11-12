@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Ouvrir les paramètres",
+  "tipWinMinimize": "Réduire",
+  "tipWinMaximize": "Agrandir",
+  "tipWinRestore": "Restaurer",
+  "tipWinClose": "Fermer",
   "tipHdrBatch": "Lot: convertir plusieurs fichiers avec des préréglages",
   "tipHdrWork": "Travail: un fichier à la fois",
   "tipHdrHelp": "Aide",

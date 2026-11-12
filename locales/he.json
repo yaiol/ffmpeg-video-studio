@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "פתח הגדרות",
+  "tipWinMinimize": "מזער",
+  "tipWinMaximize": "הגדל",
+  "tipWinRestore": "שחזר",
+  "tipWinClose": "סגור",
   "tipHdrBatch": "אצווה: המרת קבצים רבים עם הגדרות קבועות מראש",
   "tipHdrWork": "עבודה: קובץ אחד בכל פעם",
   "tipHdrHelp": "עזרה",

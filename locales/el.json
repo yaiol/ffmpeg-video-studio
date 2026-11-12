@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Άνοιγμα ρυθμίσεων",
+  "tipWinMinimize": "Ελαχιστοποίηση",
+  "tipWinMaximize": "Μεγιστοποίηση",
+  "tipWinRestore": "Επαναφορά",
+  "tipWinClose": "Κλείσιμο",
   "tipHdrBatch": "Ομαδική: μετατροπή πολλών αρχείων με προεπιλογές",
   "tipHdrWork": "Εργασία: ένα αρχείο κάθε φορά",
   "tipHdrHelp": "Βοήθεια",

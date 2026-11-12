@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Ṣi eto",
+  "tipWinMinimize": "Kere",
+  "tipWinMaximize": "Gbòòrò",
+  "tipWinRestore": "Mu pada",
+  "tipWinClose": "Pa",
   "tipHdrBatch": "Batch: yi ọpọlọpọ awọn faili pada pẹlu awọn tito tẹlẹ",
   "tipHdrWork": "Iṣẹ: faili kan ni akoko kan",
   "tipHdrHelp": "Iranlọwọ",

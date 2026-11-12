@@ -182,7 +182,6 @@ pub fn Converter(
     /// The header's first group (batch / work) - the app owns it.
     header_start: Element,
     /// The header's right-hand group (GitHub, help, settings) - the app owns those.
-    header_end: Element,
     on_manage: EventHandler<String>,
     children: Element,
 ) -> Element {
@@ -447,7 +446,7 @@ pub fn Converter(
         // ⚠ CLAUDE: the header holds the file actions only (icon-only, tooltips). The choices that shape a
         // run - preset, where it goes, how many at once, Convert - live in the right-hand panel below,
         // one aligned column.
-        UisAppHeader { app_name, app_version,
+        UisAppHeader { app_name, app_version, bare: true,
             {header_start}
             div { class: "uis-barh-grp",
                 button {
@@ -473,8 +472,6 @@ pub fn Converter(
                     Icon { width: 14, height: 14, icon: crate::icons::LdBrushCleaning }
                 }
             }
-            span { class: "uis-bar-spacer" }
-            {header_end}
         }
         LbsDropZone {
             class: "uis-app-main",

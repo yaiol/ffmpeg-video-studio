@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Ayarları aç",
+  "tipWinMinimize": "Simge Durumuna Küçült",
+  "tipWinMaximize": "Ekranı Kapla",
+  "tipWinRestore": "Geri Yükle",
+  "tipWinClose": "Kapat",
   "tipHdrBatch": "Toplu: birçok dosyayı ön ayarlar ile dönüştürün",
   "tipHdrWork": "Çalışma: her seferinde bir dosya",
   "tipHdrHelp": "Yardım",

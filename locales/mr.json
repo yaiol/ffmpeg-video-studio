@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "सेटिंग्ज उघडा",
+  "tipWinMinimize": "लहान करा",
+  "tipWinMaximize": "मोठे करा",
+  "tipWinRestore": "पुनर्संचयित करा",
+  "tipWinClose": "बंद करा",
   "tipHdrBatch": "बॅच: प्रीसेटसह अनेक फाइल्स रूपांतरित करा",
   "tipHdrWork": "कार्य: एका वेळी एक फाइल",
   "tipHdrHelp": "मदत",

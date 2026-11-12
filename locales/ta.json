@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "அமைப்புகளைத் திற",
+  "tipWinMinimize": "சுருக்கு",
+  "tipWinMaximize": "பெரிதாக்கு",
+  "tipWinRestore": "மீட்டமை",
+  "tipWinClose": "மூடு",
   "tipHdrBatch": "தொகுப்பு: முன்னமைவுகளுடன் பல கோப்புகளை மாற்றவும்",
   "tipHdrWork": "வேலை: ஒரு நேரத்தில் ஒரு கோப்பு",
   "tipHdrHelp": "உதவி",

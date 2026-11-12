@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Buka tetapan",
+  "tipWinMinimize": "Minimumkan",
+  "tipWinMaximize": "Maksimumkan",
+  "tipWinRestore": "Pulihkan",
+  "tipWinClose": "Tutup",
   "tipHdrBatch": "Kelompok: tukar banyak fail dengan pratetap",
   "tipHdrWork": "Kerja: satu fail pada satu masa",
   "tipHdrHelp": "Bantuan",

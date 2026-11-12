@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Mở cài đặt",
+  "tipWinMinimize": "Thu nhỏ",
+  "tipWinMaximize": "Phóng to",
+  "tipWinRestore": "Khôi phục",
+  "tipWinClose": "Đóng",
   "tipHdrBatch": "Hàng loạt: chuyển đổi nhiều tệp với cài đặt trước",
   "tipHdrWork": "Làm việc: một tệp tại một thời điểm",
   "tipHdrHelp": "Trợ giúp",

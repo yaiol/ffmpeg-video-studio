@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "設定を開く",
+  "tipWinMinimize": "最小化",
+  "tipWinMaximize": "最大化",
+  "tipWinRestore": "元に戻す",
+  "tipWinClose": "閉じる",
   "tipHdrBatch": "バッチ: プリセットで複数のファイルを変換",
   "tipHdrWork": "作業: 一度に1つのファイル",
   "tipHdrHelp": "ヘルプ",

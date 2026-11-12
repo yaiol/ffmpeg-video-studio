@@ -1,5 +1,9 @@
 {
   "tipHdrSettings": "Deschide setările",
+  "tipWinMinimize": "Minimizare",
+  "tipWinMaximize": "Maximizare",
+  "tipWinRestore": "Restaurare",
+  "tipWinClose": "Închidere",
   "tipHdrBatch": "Lot: convertiți multe fișiere cu presetări",
   "tipHdrWork": "Lucru: un fișier la un moment dat",
   "tipHdrHelp": "Ajutor",

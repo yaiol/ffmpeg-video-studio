@@ -22,7 +22,7 @@ use std::{
     time::Duration,
 };
 
-pub const MANIFEST_URL: &str = "https://apps.yaiol.com/ffmpeg.json";
+pub const MANIFEST_URL: &str = "https://apps.yaiol.com/data/ffmpeg.json";
 
 /// The schema of the pair (ffmpeg + catalogue) this code understands: the entry of the manifest it reads, and the name of its folder.
 pub const SCHEMA: u32 = 1;
