@@ -520,6 +520,7 @@ fn NumberRow(control: Control, value: Option<f64>, on_pick: EventHandler<V>) -> 
     rsx! {
         if let Some((lo , hi)) = slider {
             input {
+                class: "uis-sld",
                 r#type: "range",
                 min: "{lo}",
                 max: "{hi}",
@@ -561,6 +562,7 @@ fn ExpressionRow(control: Control, value: String, on_pick: EventHandler<V>) -> E
     let at = value.trim().parse::<f64>().unwrap_or(soft.min);
     rsx! {
         input {
+            class: "uis-sld",
             r#type: "range",
             min: "{soft.min}",
             max: "{soft.max}",

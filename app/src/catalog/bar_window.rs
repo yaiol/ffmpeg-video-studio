@@ -1,6 +1,8 @@
-// twin: uis-bar-window.jsx jsx@c7b60c1540ee rsx@e76cf75e0cce
+// twin: uis-bar-window.jsx jsx@c7ddf26de248 rsx@fb6510a4961a
 //! UisBarWindow — twin of `uis-bar-window.jsx`: the window bar, the app's own title bar on a window that has no
-//! system frame. The app's icon (`icon_src`, a picture URL; empty = none) and the app-wide buttons (the children)
+//! system frame. The app's icon (`icon_src`, a picture URL; empty = none) and the app-wide buttons (the children:
+//! settings, help, source, then the two reminders of `news_loader.rs`: `UisBtnUpdate`, a newer version is out,
+//! and `UisBtnNews`, yaiol has news for this app)
 //! at the start, the app name and the version pill in the middle, the three window buttons at the end. Same classes and element order, so `uis-bar-window.css` skins it
 //! unchanged. It holds no words and does nothing to the window itself: the app passes the tooltips, whether the
 //! window is maximized, and what each button does. `on_maximize` is one handler for both states.

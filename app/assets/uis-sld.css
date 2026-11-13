@@ -1,0 +1,23 @@
+/* .uis-sld - the slider: the system's own range input, in the accent colour, with a thin line.
+   Use: <input type="range" class="uis-sld">. How wide it is belongs to the place it sits in (a width, or flex: 1);
+   the thickness of its line and the size of its circle are set here and nowhere else.
+
+   The system draws the line as thick as the input is tall, so the height IS the thickness. It has no setting for the
+   circle, so the compact size draws the whole control at 14/16: the circle is 14px instead of 16. */
+.uis-sld {
+  height: 4px;
+  margin: 0;
+  accent-color: var(--uis-accent);
+  cursor: pointer;
+}
+
+.uis-sld:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Compact: asked for on the slider itself, or given by the compact panel it sits in. */
+.uis-sld.compact,
+.uis-cmp-panel .uis-sld {
+  zoom: 0.875;
+}

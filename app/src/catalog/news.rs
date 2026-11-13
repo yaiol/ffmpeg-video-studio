@@ -1,4 +1,4 @@
-// twin: news.mjs jsx@0ad704456c67 rsx@331f2464e1d0
+// twin: news.mjs jsx@2f85db16f49a rsx@de54734a1878
 //! News — twin of `news.mjs`: what a yaiol app may show its user as news, and the per-MACHINE state that
 //! says whether to show any. Same feed, same rules, same state file as the electron apps.
 //!
@@ -101,6 +101,17 @@ pub fn dismiss(ids: &[String]) {
     write_state(&state);
 }
 
+/// The box of an already silenced card was unticked (the update card, reopened from the window bar's reminder
+/// button): forget these ids, so it shows on launch again.
+pub fn restore(ids: &[String]) {
+    let mut state = read_state();
+    let before = state.dismissed.len();
+    state.dismissed.retain(|id| !ids.contains(id));
+    if state.dismissed.len() != before {
+        write_state(&state);
+    }
+}
+
 fn load_feed() -> Option<Value> {
     if std::env::var_os("YAIOL_DEV").is_some() {
         return None;
@@ -167,7 +178,9 @@ fn lang_map(v: Option<&Value>) -> BTreeMap<String, UisNewsLang> {
         .unwrap_or_default()
 }
 
-/// The announcements of a feed that THIS app, today, with this state, should show.
+/// The announcements of a feed that are live for THIS app today. One the user silenced is STILL returned,
+/// marked `dismissed`: the loader does not show it on launch but keeps it for the window bar's news button,
+/// which reopens it. One that has ended is gone, button included.
 fn select(feed: &Value, state: &UisNewsState, app_id: &str, today: &str) -> Vec<UisNewsItem> {
     let Some(list) = feed.get("announcements").and_then(Value::as_array) else { return Vec::new() };
     list.iter()
@@ -176,7 +189,6 @@ fn select(feed: &Value, state: &UisNewsState, app_id: &str, today: &str) -> Vec<
             let lang = lang_map(a.get("lang"));
             let keep = a.get("draft") != Some(&Value::Bool(true))
                 && is_readable(a.get("version"))
-                && !state.dismissed.iter().any(|d| d == id)
                 && !is_not_started(a.get("start").and_then(Value::as_str), today)
                 && !is_expired(a.get("end").and_then(Value::as_str), today)
                 && is_targeted(a.get("target"), app_id)
@@ -185,6 +197,7 @@ fn select(feed: &Value, state: &UisNewsState, app_id: &str, today: &str) -> Vec<
                 id: id.to_owned(),
                 lang,
                 link: a.get("link").and_then(Value::as_str).map(str::to_owned),
+                dismissed: state.dismissed.iter().any(|d| d == id),
                 ..Default::default()
             })
         })
@@ -223,14 +236,16 @@ fn update_cards(app_id: &str, app_version: &str, latest: &str, releases: Option<
     }]
 }
 
-/// A newer version of this app, as one card (none when up to date, dismissed, or offline). Not governed by the news switch.
+/// A newer version of this app, as one card (none when up to date or offline). Not governed by the news switch.
+/// A card the user silenced is STILL returned, marked `dismissed`: the loader does not show it on launch but keeps
+/// it for the window bar's reminder button, which reopens it.
 fn current_update(app_id: &str, app_version: &str, lang: &str, state: &UisNewsState) -> Vec<UisNewsItem> {
     if std::env::var_os("YAIOL_DEV").is_some() || app_version.is_empty() {
         return Vec::new();
     }
     let base = format!("{SITE_APPS}/p/{app_id}");
     let Some(latest) = fetch_json(&format!("{base}/latest.json")).and_then(|b| b.get("version")?.as_str().map(str::to_owned)) else { return Vec::new() };
-    if engine::compare_versions(&latest, app_version).is_le() || state.dismissed.contains(&format!("update:{app_id}:{latest}")) {
+    if engine::compare_versions(&latest, app_version).is_le() {
         return Vec::new();
     }
     let code = lang.replace('_', "-");
@@ -242,11 +257,15 @@ fn current_update(app_id: &str, app_version: &str, lang: &str, state: &UisNewsSt
             break;
         }
     }
-    update_cards(app_id, app_version, &latest, releases.as_ref(), &code)
+    let mut cards = update_cards(app_id, app_version, &latest, releases.as_ref(), &code);
+    for card in &mut cards {
+        card.dismissed = state.dismissed.contains(&card.id);
+    }
+    cards
 }
 
 /// What to show now: first a new version (when `app_version` is given and a newer one is out), then the feed’s
-/// announcements that are live, targeted at `app_id` and not yet dismissed - none of them, and no request for
+/// announcements that are live and targeted at `app_id` (a silenced one marked `dismissed`) - none of them, and no request for
 /// them, when the news switch is off. Silent on every failure.
 pub fn current(app_id: &str, app_version: &str, lang: &str, today: &str) -> Vec<UisNewsItem> {
     let state = read_state();
@@ -313,9 +332,16 @@ mod tests {
     }
 
     #[test]
-    fn dismissed_ids_stay_hidden() {
+    fn a_silenced_announcement_is_kept_and_marked() {
+        // It is still returned (the news button reopens it); the loader is what keeps it off the launch dialog.
         let s = UisNewsState { enabled: true, dismissed: vec!["a".into()] };
-        assert!(select(&feed(), &s, "lrc-editor", "2026-10-18").is_empty());
+        let items = select(&feed(), &s, "lrc-editor", "2026-10-18");
+        assert_eq!(ids(&items), ["a"]);
+        assert!(items[0].dismissed);
+        assert!(!select(&feed(), &UisNewsState::default(), "lrc-editor", "2026-10-18")[0].dismissed);
+        // ended = gone, silenced or not
+        let s = UisNewsState { enabled: true, dismissed: vec!["old".into()] };
+        assert_eq!(ids(&select(&feed(), &s, "lrc-editor", "2026-10-18")), ["a"]);
     }
 
     #[test]

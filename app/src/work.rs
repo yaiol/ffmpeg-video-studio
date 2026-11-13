@@ -468,6 +468,18 @@ pub fn Work(
         }
     };
 
+    // Files named when the app was started (another program opening a file in this one) are added once, when the view first appears.
+    let mut opened = use_signal(|| false);
+    use_effect(move || {
+        if !*opened.peek() {
+            opened.set(true);
+            let given: Vec<PathBuf> = std::env::args_os().skip(1).map(PathBuf::from).filter(|p| p.is_file()).collect();
+            if !given.is_empty() {
+                add_paths(given);
+            }
+        }
+    });
+
     let pick_files = move |_| {
         spawn(async move {
             let exts: Vec<&str> = engine::VIDEO_EXTENSIONS.to_vec();

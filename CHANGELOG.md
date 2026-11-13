@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.2 — 2026-11-14
+
+- New reminder button in the title bar when a newer version is out: it stays after the new-version card is closed or hidden with Don't show again, and a click reopens the card with the release notes and the download link
+- New News button in the title bar while yaiol has an announcement for the app: a click reopens the announcements, including the ones hidden with Don't show again. It does not appear when Show news from yaiol is off
+- Don't show again can be undone: reopen a card from its title-bar button and untick the box, and it shows again at the next launch
+- A video file given to the app when it starts (another program opening the file with it, or a path on the command line) is added to the work view
+- The About page and the package carry a new one-line description of the app, and the Settings button's tooltip reads "Settings" instead of "Open settings"
+- The sliders of the effects and the volume slider under the picture have a new look
+
 ## 2.0.1 — 2026-11-13
 
 - The app draws its own title bar: the app icon, then Settings, Help and GitHub at its start, the name and version in the middle, and minimize, maximize and close at its end; the header under it keeps only the view and file buttons

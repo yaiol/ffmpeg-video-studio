@@ -1380,7 +1380,7 @@ pub fn PreviewPane(state: Signal<State>, mut pos: Signal<f64>, channel: Signal<A
                         }
                     }
                     input {
-                        class: "wv-volume",
+                        class: "uis-sld wv-volume",
                         r#type: "range",
                         min: "0",
                         max: "100",

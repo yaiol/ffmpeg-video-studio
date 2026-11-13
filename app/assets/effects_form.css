@@ -5,7 +5,7 @@ pre.cmd{margin:0;padding:7px 9px;min-width:0;background:var(--uis-bg-row);border
 .effect-ctl>.uis-txt,.effect-ctl>.uis-ddn-std{flex:1;min-width:0}
 .effect-ctl .sz{flex:0 0 74px}
 .effect-ctl .szp{flex:0 1 auto;max-width:140px}
-.effect-ctl input[type=range]{flex:1;min-width:50px;accent-color:var(--uis-accent)}
+.effect-ctl .uis-sld{flex:1;min-width:50px}
 .effect-ctl .unit{color:var(--uis-text-mute);font-size:12px;white-space:nowrap}
 .effect-ctl .unit.bad{color:var(--uis-danger)}
 .effect-form .flags{display:flex;flex-wrap:wrap;gap:4px 12px}
@@ -21,7 +21,7 @@ pre.cmd{margin:0;padding:7px 9px;min-width:0;background:var(--uis-bg-row);border
 .effect-form.compact .uis-fld-labelled-ctl.effect-ctl>.uis-num{flex:0 0 50px}
 .effect-form.compact .uis-num-steppers{display:none}
 .effect-form.compact .uis-num-input{font-size:11px;padding:0 4px;text-align:right}
-.effect-form.compact input[type=range]{height:14px;min-width:36px}
+.effect-form.compact .uis-sld{min-width:36px}
 .effect-form.compact .uis-fld-labelled-ctl .fx-reset{flex:0 0 20px}
 .effect-form.compact .uis-fld-labelled-ctl .fx-reset{margin-left:0}
 .effect-form.compact .flags{gap:2px 10px}

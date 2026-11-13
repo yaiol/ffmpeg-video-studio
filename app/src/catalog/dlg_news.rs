@@ -1,10 +1,11 @@
-// twin: uis-dlg-news.jsx jsx@238050b6332b rsx@46df1c92827b
+// twin: uis-dlg-news.jsx jsx@156a224fadaf rsx@e92315f67e0e
 //! UisDlgNews — twin of `uis-dlg-news.jsx`: the ONE pop-up that shows yaiol news, in every app that
 //! shows news. Controlled and fetch-free:
 //!
 //!   `items`  - the announcements, or ONE update card (`kind == "update"`: the latest version and the notes of every release newer
 //!              than the one running, see `news.rs`; title = `lblUpdateAvailable` + the version, text = the notes, button =
-//!              `btnUpdateDownload`). Several turn as a carousel: by itself (about reading time, 5-15 s each)
+//!              `btnUpdateDownload`; one marked `dismissed`, the update card reopened from the window bar after "don't
+//!              show again", opens with its box already ticked). Several turn as a carousel: by itself (about reading time, 5-15 s each)
 //!              until the reader clicks a number / arrow (or ticks the box), and the dialog keeps one size
 //!              throughout. `lang` is `{ language: { title, subtitle, text } }`, resolved HERE field by field by
 //!              language -> base language -> `en`, the picture included. An `image` is an https:// address,
@@ -13,7 +14,7 @@
 //!   words    - the four the dialog needs (`lblNewsHideForever`, `btnNewsOpenLink`, `btnNewsClose`, `tipNewsDismiss`) are
 //!              read from the app's own `crate::i18n`, as the settings page and the update banner do
 //!   `on_close` - fired by the X, Esc, a click outside and Close; receives the ids whose "don't show
-//!              again" box was ticked (the box belongs to the announcement being shown)
+//!              again" box is ticked when it closes (the box belongs to the announcement being shown)
 //!
 //! An item whose title cannot be resolved is skipped; with none left the dialog renders nothing. Same
 //! classes and element order, so the `.uis-dlp*` rules in `uis-app.css` skin it. Links open in the system
@@ -69,6 +70,10 @@ pub struct UisNewsItem {
     pub version: String,
     #[serde(default)]
     pub text: String,
+    /// An update card the user already silenced ("don't show again"): not shown on launch, kept for the window bar's
+    /// reminder button, and its box opens ticked.
+    #[serde(default)]
+    pub dismissed: bool,
 }
 
 /// A card's title: an update's is the app's "new version" label and the version; an announcement's comes from its languages.
@@ -134,7 +139,9 @@ pub fn UisDlgNews(
     let (update_label, download_label) = (t("lblUpdateAvailable"), t("btnUpdateDownload"));
     let mut index = use_signal(|| 0usize);
     let mut auto = use_signal(|| true);
-    let mut hidden = use_signal(BTreeSet::<String>::new);
+    // A card that is already silenced opens with its box ticked.
+    let ticked: BTreeSet<String> = items.iter().filter(|it| it.dismissed).map(|it| it.id.clone()).collect();
+    let mut hidden = use_signal(move || ticked);
     // Images that did not load: the box stays, empty.
     let mut failed = use_signal(BTreeSet::<String>::new);
     // Bumped whenever the turning timer is restarted or cancelled, so a sleeping one knows it is stale.

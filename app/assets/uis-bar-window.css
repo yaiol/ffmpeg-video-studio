@@ -76,5 +76,9 @@
 .uis-barh-window-btn:hover { background: var(--uis-win-bar-hov, var(--uis-s-hov)); color: var(--uis-win-bar-text, var(--uis-text)); }
 /* On (the settings page is open): the same accent tint every active button carries. */
 .uis-barh-window-btn.active { color: var(--uis-win-bar-text, var(--uis-accent)); background: var(--uis-win-bar-hov, color-mix(in srgb, var(--uis-accent) 14%, transparent)); }
+/* A newer version is out (UisBtnUpdate, the reminder after the app-wide buttons): the identity accent, so it is
+   the one button of the bar that stands out. Colour only. On a bar the app has coloured it takes the bar's text
+   colour like every other button (the accent may not be readable there). First direction, owner to judge. */
+.uis-barh-window-btn.update, .uis-barh-window-btn.update:hover { color: var(--uis-win-bar-text, var(--uis-accent)); }
 /* Close warns: the one window button that cannot be undone. */
 .uis-barh-window-btn.close:hover { background: var(--uis-danger); color: #fff; }

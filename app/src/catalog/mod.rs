@@ -38,7 +38,7 @@ pub use bar_window::UisBarWindow;
 pub use header::UisAppHeader;
 pub use icons::UisIcoGithub;
 pub use num::UisNum;
-pub use news_loader::UisNewsLoader;
+pub use news_loader::{UisBtnNews, UisBtnUpdate, UisNewsLoader};
 pub use stg_view::{UisAppTab, UisStgView};
 pub use equalizer::{EqView, UisEqualizer};
 pub use transfer::UisTransfer;

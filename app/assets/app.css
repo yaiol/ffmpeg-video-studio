@@ -94,7 +94,7 @@ body {
 .wv-fadenums { position: absolute; inset: auto 4px 1px 4px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--uis-text); pointer-events: none; z-index: 3; }
 .wv-fadenums > * { pointer-events: auto; padding: 0 4px; border-radius: 4px; background: color-mix(in srgb, var(--uis-bg-elev) 80%, transparent); }
 .wv-bar { display: flex; align-items: center; gap: 4px; }
-.wv-volume { width: 70px; height: 14px; margin: 0 4px; accent-color: var(--uis-accent); }
+.wv-volume { width: 80px; margin: 0 4px; }
 .wv-cut { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--uis-text-dim); }
 /* The work view's panel is compact: its rows (CompactField) sit closer together. */
 .work-panel { width: 336px; gap: 6px; padding: 10px; overflow-y: auto; }

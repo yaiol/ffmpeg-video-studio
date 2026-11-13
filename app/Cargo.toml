@@ -1,8 +1,8 @@
 [package]
 name = "ffmpeg-video-studio"
-version = "2.0.1"
+version = "2.0.2"
 edition = "2024"
-description = "FFmpeg Video Studio: cut, grade, fade and convert video. ffmpeg is the engine."
+description = "A Studio to cut and grade one video and see each effect, and a Batch to convert many files at once. ffmpeg is the engine."
 
 # Identity that is not a standard Cargo field. build.rs turns it into compile-time constants, so
 # the source carries no literal name (the analogue of reading package.json's productName).
