@@ -89,16 +89,28 @@ jobs:
         with:
           tool: cargo-binstall
 
+      # ⚠ CLAUDE: only a dx built for THIS machine counts, and it must actually start. On an Apple
+      # Silicon runner binstall falls back to the Intel build when the lookup of the native one times
+      # out; that build starts under Rosetta and dies at once on a missing Intel libssl (`Library not
+      # loaded: /usr/local/opt/openssl@3`). So: the native target only, tried twice (the lookup
+      # failure is a timeout), never binstall's own compile, and `dx --version` as the proof - for a
+      # cached dx too.
       - name: Install the dx CLI
         shell: bash
         run: |
-          if command -v dx >/dev/null 2>&1; then
+          host=$(rustc -vV | sed -n 's/^host: //p')
+          prebuilt() {
+            cargo binstall dioxus-cli@"${{ steps.dx.outputs.version }}" --no-confirm --locked --force \
+              --targets "$host" --disable-strategies compile && dx --version
+          }
+          if command -v dx >/dev/null 2>&1 && dx --version; then
             echo "dx already present (cached)"
-          elif cargo binstall dioxus-cli@"${{ steps.dx.outputs.version }}" --no-confirm --locked; then
-            echo "dx installed from a prebuilt binary"
+          elif prebuilt || prebuilt; then
+            echo "dx installed from a prebuilt binary ($host)"
           else
-            echo "no prebuilt dx - building from source"
-            cargo install dioxus-cli --version "${{ steps.dx.outputs.version }}" --locked
+            echo "no usable prebuilt dx for $host - building from source"
+            cargo install dioxus-cli --version "${{ steps.dx.outputs.version }}" --locked --force
+            dx --version
           fi
 
       # An app that bundles a program of its own (the audio converter's ffmpeg) ships a script that
