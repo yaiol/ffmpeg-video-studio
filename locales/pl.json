@@ -32,7 +32,6 @@
   "btnMainClear": "Wyczyść listę",
   "btnMainStop": "Zatrzymaj",
   "btnMainApply": "Zastosuj",
-  "btnMainConvert": "Konwertuj",
   "lblMainPreset": "Ustawienie wstępne",
   "lblMainVideo": "Wideo",
   "lblFxNone": "Brak",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} plików gotowych do konwersji",
   "msgMainSelected": "Wybrano: {n}",
   "tipMainApply": "Zastosuj te opcje do wybranych plików",
-  "tipMainOpenOutput": "Otwórz folder wyjściowy",
+  "tipMainShowFile": "Pokaż plik w jego folderze",
+  "tipMainStop": "Zatrzymaj",
+  "tipMainPrevious": "Poprzedni plik",
+  "tipMainNext": "Następny plik",
+  "tipMainPlayerClose": "Zamknij odtwarzacz",
   "lblMainDestSource": "Folder źródłowy",
   "ttlMainNotify": "Konwersja zakończona",
   "tabStgNotifications": "Powiadomienia",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Wyłącz wyciszenie",
   "tipWorkVolume": "Głośność",
   "lblWorkCommand": "Polecenie ffmpeg",
-  "btnWorkCommandCopy": "Kopiuj",
   "tipWorkCommandCopy": "Skopiuj polecenie do schowka",
   "msgWorkCommandNone": "Wybierz plik, aby zobaczyć polecenie, które ffmpeg dla niego uruchomi",
   "tipWorkFold": "Ukryj panel pod obrazem",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Koduj za pomocą",
   "lblStgEncoderSoftware": "Oprogramowanie",
   "lblStgEncoderAuto": "Automatycznie",
-  "msgStgEncoderHint": "Silnik dla ustawień predefiniowanych ustawiony na „Użyj domyślnego kodera”. Oprogramowanie daje ten sam plik na każdej maszynie. Karta graficzna jest szybsza, ale tworzy większe pliki o tej samej jakości; Automatycznie próbuje NVIDIA, następnie AMD, następnie Intel. Ustawienie predefiniowane, które wymaga więcej niż karta może tutaj zapewnić (10-bit, docelowy bitrate, parametry x265, strojenie), jest zawsze kodowane programowo, podobnie jak karta, której ta maszyna nie posiada."
+  "msgStgEncoderHint": "Silnik dla ustawień predefiniowanych ustawiony na „Użyj domyślnego kodera”. Oprogramowanie daje ten sam plik na każdej maszynie. Karta graficzna jest szybsza, ale tworzy większe pliki o tej samej jakości; Automatycznie próbuje NVIDIA, następnie AMD, następnie Intel. Ustawienie predefiniowane, które wymaga więcej niż karta może tutaj zapewnić (10-bit, docelowy bitrate, parametry x265, strojenie), jest zawsze kodowane programowo, podobnie jak karta, której ta maszyna nie posiada.",
+  "btnMainEncode": "Koduj",
+  "btnWorkCommandCopy": "Kopiuj"
 }

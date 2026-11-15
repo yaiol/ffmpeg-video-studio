@@ -32,7 +32,6 @@
   "btnMainClear": "Xóa danh sách",
   "btnMainStop": "Dừng",
   "btnMainApply": "Áp dụng",
-  "btnMainConvert": "Chuyển đổi",
   "lblMainPreset": "Cài đặt trước",
   "lblMainVideo": "Video",
   "lblFxNone": "Không",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} tệp sẵn sàng để chuyển đổi",
   "msgMainSelected": "Đã chọn {n}",
   "tipMainApply": "Áp dụng các lựa chọn này cho các tệp đã chọn",
-  "tipMainOpenOutput": "Mở thư mục đầu ra",
+  "tipMainShowFile": "Hiển thị tệp trong thư mục của nó",
+  "tipMainStop": "Dừng",
+  "tipMainPrevious": "Tệp trước",
+  "tipMainNext": "Tệp tiếp theo",
+  "tipMainPlayerClose": "Đóng trình phát",
   "lblMainDestSource": "Thư mục nguồn",
   "ttlMainNotify": "Chuyển đổi hoàn tất",
   "tabStgNotifications": "Thông báo",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Bật tiếng",
   "tipWorkVolume": "Âm lượng",
   "lblWorkCommand": "Lệnh ffmpeg",
-  "btnWorkCommandCopy": "Sao chép",
   "tipWorkCommandCopy": "Sao chép lệnh vào bảng nhớ tạm",
   "msgWorkCommandNone": "Chọn một tệp để xem lệnh ffmpeg sẽ chạy cho tệp đó",
   "tipWorkFold": "Ẩn bảng điều khiển bên dưới hình ảnh",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Mã hóa bằng",
   "lblStgEncoderSoftware": "Phần mềm",
   "lblStgEncoderAuto": "Tự động",
-  "msgStgEncoderHint": "Công cụ cho các cài đặt trước được đặt thành \"Sử dụng bộ mã hóa mặc định\". Phần mềm tạo ra cùng một tệp trên mọi máy. Card đồ họa nhanh hơn nhưng tạo ra các tệp lớn hơn với cùng chất lượng; Tự động thử NVIDIA, sau đó AMD, sau đó Intel. Một cài đặt trước yêu cầu nhiều hơn những gì card có thể cung cấp ở đây (10-bit, tốc độ bit mục tiêu, thông số x265, điều chỉnh) luôn được mã hóa bằng phần mềm, và cả card mà máy này không có."
+  "msgStgEncoderHint": "Công cụ cho các cài đặt trước được đặt thành \"Sử dụng bộ mã hóa mặc định\". Phần mềm tạo ra cùng một tệp trên mọi máy. Card đồ họa nhanh hơn nhưng tạo ra các tệp lớn hơn với cùng chất lượng; Tự động thử NVIDIA, sau đó AMD, sau đó Intel. Một cài đặt trước yêu cầu nhiều hơn những gì card có thể cung cấp ở đây (10-bit, tốc độ bit mục tiêu, thông số x265, điều chỉnh) luôn được mã hóa bằng phần mềm, và cả card mà máy này không có.",
+  "btnMainEncode": "Mã hóa",
+  "btnWorkCommandCopy": "Sao chép"
 }

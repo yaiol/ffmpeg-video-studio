@@ -32,7 +32,6 @@
   "btnMainClear": "목록 지우기",
   "btnMainStop": "중지",
   "btnMainApply": "적용",
-  "btnMainConvert": "변환",
   "lblMainPreset": "사전 설정",
   "lblMainVideo": "비디오",
   "lblFxNone": "없음",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n}개 파일 변환 준비 완료",
   "msgMainSelected": "{n}개 선택됨",
   "tipMainApply": "선택한 파일에 이 선택 사항을 적용합니다.",
-  "tipMainOpenOutput": "출력 폴더 열기",
+  "tipMainShowFile": "파일을 폴더에서 보기",
+  "tipMainStop": "중지",
+  "tipMainPrevious": "이전 파일",
+  "tipMainNext": "다음 파일",
+  "tipMainPlayerClose": "플레이어 닫기",
   "lblMainDestSource": "원본 폴더",
   "ttlMainNotify": "변환 완료",
   "tabStgNotifications": "알림",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "음소거 해제",
   "tipWorkVolume": "볼륨",
   "lblWorkCommand": "ffmpeg 명령",
-  "btnWorkCommandCopy": "복사",
   "tipWorkCommandCopy": "명령을 클립보드에 복사",
   "msgWorkCommandNone": "ffmpeg가 실행할 명령을 보려면 파일을 선택하세요",
   "tipWorkFold": "그림 아래 패널 숨기기",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "다음으로 인코딩",
   "lblStgEncoderSoftware": "소프트웨어",
   "lblStgEncoderAuto": "자동",
-  "msgStgEncoderHint": "프리셋의 엔진은 \"기본 인코더 사용\"으로 설정되어 있습니다. 소프트웨어는 모든 머신에서 동일한 파일을 제공합니다. 그래픽 카드는 더 빠르지만 동일한 품질에서 더 큰 파일을 만듭니다. 자동은 NVIDIA, 다음 AMD, 다음 Intel을 시도합니다. 카드에서 제공할 수 있는 것 이상(10비트, 목표 비트레이트, x265 매개변수, 튜닝)을 필요로 하는 프리셋은 항상 소프트웨어로 인코딩되며, 이 머신에 없는 카드도 마찬가지입니다."
+  "msgStgEncoderHint": "프리셋의 엔진은 \"기본 인코더 사용\"으로 설정되어 있습니다. 소프트웨어는 모든 머신에서 동일한 파일을 제공합니다. 그래픽 카드는 더 빠르지만 동일한 품질에서 더 큰 파일을 만듭니다. 자동은 NVIDIA, 다음 AMD, 다음 Intel을 시도합니다. 카드에서 제공할 수 있는 것 이상(10비트, 목표 비트레이트, x265 매개변수, 튜닝)을 필요로 하는 프리셋은 항상 소프트웨어로 인코딩되며, 이 머신에 없는 카드도 마찬가지입니다.",
+  "btnMainEncode": "인코딩",
+  "btnWorkCommandCopy": "복사"
 }

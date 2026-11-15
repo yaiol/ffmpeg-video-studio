@@ -32,7 +32,6 @@
   "btnMainClear": "Futa orodha",
   "btnMainStop": "Simamisha",
   "btnMainApply": "Tekeleza",
-  "btnMainConvert": "Badilisha",
   "lblMainPreset": "Mpangilio",
   "lblMainVideo": "Video",
   "lblFxNone": "Hakuna",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} faili tayari kwa ubadilishaji",
   "msgMainSelected": "{n} zimechaguliwa",
   "tipMainApply": "Tekeleza chaguo hizi kwa faili zilizochaguliwa",
-  "tipMainOpenOutput": "Fungua folda ya matokeo",
+  "tipMainShowFile": "Onyesha faili kwenye folda yake",
+  "tipMainStop": "Simamisha",
+  "tipMainPrevious": "Faili iliyopita",
+  "tipMainNext": "Faili inayofuata",
+  "tipMainPlayerClose": "Funga kichezaji",
   "lblMainDestSource": "Folda Chanzo",
   "ttlMainNotify": "Ubadilishaji umekamilika",
   "tabStgNotifications": "Arifa",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Washa sauti",
   "tipWorkVolume": "Sauti",
   "lblWorkCommand": "amri ya ffmpeg",
-  "btnWorkCommandCopy": "Nakili",
   "tipWorkCommandCopy": "Nakili amri kwenye ubao wa kunakili",
   "msgWorkCommandNone": "Chagua faili ili kuona amri ambayo ffmpeg itaendesha kwa ajili yake",
   "tipWorkFold": "Ficha paneli chini ya picha",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Simbua kwa",
   "lblStgEncoderSoftware": "Programu",
   "lblStgEncoderAuto": "Kiotomatiki",
-  "msgStgEncoderHint": "Injini ya mipangilio iliyowekwa awali imewekwa kwenye \"Tumia kisimbaji chaguo-msingi\". Programu hutoa faili sawa kwenye kila mashine. Kadi ya michoro ni haraka lakini hufanya faili kubwa zaidi kwa ubora sawa; Kiotomatiki hujaribu NVIDIA, kisha AMD, kisha Intel. Mipangilio iliyowekwa awali inayohitaji zaidi ya kadi inavyoweza kutoa hapa (10-bit, kiwango cha biti lengwa, vigezo vya x265, urekebishaji) husimbwa kila wakati kwenye programu, na vivyo hivyo kadi ambayo mashine hii haina."
+  "msgStgEncoderHint": "Injini ya mipangilio iliyowekwa awali imewekwa kwenye \"Tumia kisimbaji chaguo-msingi\". Programu hutoa faili sawa kwenye kila mashine. Kadi ya michoro ni haraka lakini hufanya faili kubwa zaidi kwa ubora sawa; Kiotomatiki hujaribu NVIDIA, kisha AMD, kisha Intel. Mipangilio iliyowekwa awali inayohitaji zaidi ya kadi inavyoweza kutoa hapa (10-bit, kiwango cha biti lengwa, vigezo vya x265, urekebishaji) husimbwa kila wakati kwenye programu, na vivyo hivyo kadi ambayo mashine hii haina.",
+  "btnMainEncode": "Simbika",
+  "btnWorkCommandCopy": "Nakili"
 }

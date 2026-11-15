@@ -32,7 +32,6 @@
   "btnMainClear": "Golește lista",
   "btnMainStop": "Oprește",
   "btnMainApply": "Aplică",
-  "btnMainConvert": "Convertește",
   "lblMainPreset": "Preset",
   "lblMainVideo": "Video",
   "lblFxNone": "Niciunul",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} fișier(e) gata de conversie",
   "msgMainSelected": "{n} selectate",
   "tipMainApply": "Aplică aceste opțiuni fișierelor selectate",
-  "tipMainOpenOutput": "Deschideți folderul de ieșire",
+  "tipMainShowFile": "Afișează fișierul în folderul său",
+  "tipMainStop": "Oprește",
+  "tipMainPrevious": "Fișier anterior",
+  "tipMainNext": "Fișier următor",
+  "tipMainPlayerClose": "Închide playerul",
   "lblMainDestSource": "Dosar sursă",
   "ttlMainNotify": "Conversie finalizată",
   "tabStgNotifications": "Notificări",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Activează sunetul",
   "tipWorkVolume": "Volum",
   "lblWorkCommand": "Comandă ffmpeg",
-  "btnWorkCommandCopy": "Copiază",
   "tipWorkCommandCopy": "Copiază comanda în clipboard",
   "msgWorkCommandNone": "Selectează un fișier pentru a vedea comanda pe care ffmpeg o va rula pentru el",
   "tipWorkFold": "Ascunde panoul de sub imagine",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Codificare cu",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Automat",
-  "msgStgEncoderHint": "Motorul pentru presetări este setat la „Utilizare codificator implicit”. Software-ul oferă același fișier pe fiecare mașină. O placă grafică este mai rapidă, dar creează fișiere mai mari la aceeași calitate; Automat încearcă NVIDIA, apoi AMD, apoi Intel. O presetare care necesită mai mult decât poate oferi o placă aici (10-bit, o rată de biți țintă, parametri x265, o ajustare) este întotdeauna codificată software, la fel și o placă pe care această mașină nu o are."
+  "msgStgEncoderHint": "Motorul pentru presetări este setat la „Utilizare codificator implicit”. Software-ul oferă același fișier pe fiecare mașină. O placă grafică este mai rapidă, dar creează fișiere mai mari la aceeași calitate; Automat încearcă NVIDIA, apoi AMD, apoi Intel. O presetare care necesită mai mult decât poate oferi o placă aici (10-bit, o rată de biți țintă, parametri x265, o ajustare) este întotdeauna codificată software, la fel și o placă pe care această mașină nu o are.",
+  "btnMainEncode": "Codificare",
+  "btnWorkCommandCopy": "Copiază"
 }

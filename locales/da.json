@@ -32,7 +32,6 @@
   "btnMainClear": "Ryd listen",
   "btnMainStop": "Stop",
   "btnMainApply": "Anvend",
-  "btnMainConvert": "Konverter",
   "lblMainPreset": "Forudindstilling",
   "lblMainVideo": "Video",
   "lblFxNone": "Ingen",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} fil(er) klar til konvertering",
   "msgMainSelected": "{n} valgt",
   "tipMainApply": "Anvend disse valg på de valgte filer",
-  "tipMainOpenOutput": "Åbn outputmappen",
+  "tipMainShowFile": "Vis filen i dens mappe",
+  "tipMainStop": "Stop",
+  "tipMainPrevious": "Forrige fil",
+  "tipMainNext": "Næste fil",
+  "tipMainPlayerClose": "Luk afspilleren",
   "lblMainDestSource": "Kildemappe",
   "ttlMainNotify": "Konvertering afsluttet",
   "tabStgNotifications": "Notifikationer",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Slå lyd til",
   "tipWorkVolume": "Lydstyrke",
   "lblWorkCommand": "ffmpeg kommando",
-  "btnWorkCommandCopy": "Kopiér",
   "tipWorkCommandCopy": "Kopiér kommandoen til udklipsholderen",
   "msgWorkCommandNone": "Vælg en fil for at se den kommando, ffmpeg vil køre for den",
   "tipWorkFold": "Skjul panelet under billedet",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Kodér med",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Automatisk",
-  "msgStgEncoderHint": "Motoren for forudindstillingerne er sat til \"Brug standard-encoder\". Software giver den samme fil på hver maskine. Et grafikkort er hurtigere, men laver større filer med samme kvalitet; Automatisk prøver NVIDIA, derefter AMD, derefter Intel. En forudindstilling, der kræver mere end et kort kan give her (10-bit, en målbithastighed, x265-parametre, en justering), kodes altid i software, og det gør et kort, som denne maskine ikke har, også."
+  "msgStgEncoderHint": "Motoren for forudindstillingerne er sat til \"Brug standard-encoder\". Software giver den samme fil på hver maskine. Et grafikkort er hurtigere, men laver større filer med samme kvalitet; Automatisk prøver NVIDIA, derefter AMD, derefter Intel. En forudindstilling, der kræver mere end et kort kan give her (10-bit, en målbithastighed, x265-parametre, en justering), kodes altid i software, og det gør et kort, som denne maskine ikke har, også.",
+  "btnMainEncode": "Kod",
+  "btnWorkCommandCopy": "Kopiér"
 }

@@ -318,6 +318,8 @@
   background-position: right 11px center;
 }
 /* the native popup paints its own rows: on a transparent select it would be white with the theme's light text */
+/* digit: a list of one-character values (a count), so the box is no wider than the digit and its caret. */
+.uis-ddn-std.digit { padding: 0 22px 0 10px; background-position: right 7px center; }
 .uis-ddn-std option, .uis-ddn-std optgroup { background-color: var(--uis-bg-elev); color: var(--uis-text); }
 .uis-ddn-std:hover { border-color: var(--uis-text-dim); }
 .uis-ddn-std:focus { border-color: var(--uis-accent); }

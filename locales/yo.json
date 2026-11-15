@@ -32,7 +32,6 @@
   "btnMainClear": "Pa akojọ rẹ",
   "btnMainStop": "Duro",
   "btnMainApply": "Firanṣẹ",
-  "btnMainConvert": "Yipada",
   "lblMainPreset": "Eto tẹlẹ",
   "lblMainVideo": "Fidio",
   "lblFxNone": "Ko si",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} faili ti ṣetan fun iyipada",
   "msgMainSelected": "{n} ti yan",
   "tipMainApply": "Firanṣẹ awọn yiyan wọnyi si awọn faili ti a yan",
-  "tipMainOpenOutput": "Ṣi folda ìjáde",
+  "tipMainShowFile": "Fi faili han ninu folda rẹ",
+  "tipMainStop": "Duro",
+  "tipMainPrevious": "Faili ti tẹlẹ",
+  "tipMainNext": "Faili ti o tẹle",
+  "tipMainPlayerClose": "Pa ẹrọ orin",
   "lblMainDestSource": "Folda Orisun",
   "ttlMainNotify": "Iyipada ti pari",
   "tabStgNotifications": "Awọn iwifunni",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Tan ohùn",
   "tipWorkVolume": "Ohùn",
   "lblWorkCommand": "aṣẹ ffmpeg",
-  "btnWorkCommandCopy": "Daakọ",
   "tipWorkCommandCopy": "Daakọ aṣẹ si agekuru",
   "msgWorkCommandNone": "Yan faili kan lati wo aṣẹ ti ffmpeg yoo ṣiṣe fun",
   "tipWorkFold": "Fi panẹli pamọ labẹ aworan",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Kóòdù pẹ̀lú",
   "lblStgEncoderSoftware": "Sọfitiwia",
   "lblStgEncoderAuto": "Laifọwọyi",
-  "msgStgEncoderHint": "Ẹrọ fun awọn tito tẹlẹ ti ṣeto si \"Lo encoder aiyipada\". Sọfitiwia n fun faili kanna lori gbogbo ẹrọ. Kaadi awọn aworan yiyara ṣugbọn o ṣe awọn faili ti o tobi ju pẹlu didara kanna; Laifọwọyi gbiyanju NVIDIA, lẹhinna AMD, lẹhinna Intel. Tito tẹlẹ ti o nilo ju ohun ti kaadi le fun nibi (10-bit, bitrate ibi-afẹde, awọn paramita x265, orin) ni a fi koodu sinu sọfitiwia nigbagbogbo, ati bẹẹni kaadi ti ẹrọ yii ko ni."
+  "msgStgEncoderHint": "Ẹrọ fun awọn tito tẹlẹ ti ṣeto si \"Lo encoder aiyipada\". Sọfitiwia n fun faili kanna lori gbogbo ẹrọ. Kaadi awọn aworan yiyara ṣugbọn o ṣe awọn faili ti o tobi ju pẹlu didara kanna; Laifọwọyi gbiyanju NVIDIA, lẹhinna AMD, lẹhinna Intel. Tito tẹlẹ ti o nilo ju ohun ti kaadi le fun nibi (10-bit, bitrate ibi-afẹde, awọn paramita x265, orin) ni a fi koodu sinu sọfitiwia nigbagbogbo, ati bẹẹni kaadi ti ẹrọ yii ko ni.",
+  "btnMainEncode": "Ṣe koodu",
+  "btnWorkCommandCopy": "Daakọ"
 }

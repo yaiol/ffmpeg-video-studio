@@ -32,7 +32,6 @@
   "btnMainClear": "リストをクリア",
   "btnMainStop": "停止",
   "btnMainApply": "適用",
-  "btnMainConvert": "変換",
   "lblMainPreset": "プリセット",
   "lblMainVideo": "ビデオ",
   "lblFxNone": "なし",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} ファイル変換準備完了",
   "msgMainSelected": "{n} 個選択済み",
   "tipMainApply": "これらの選択を、選択したファイルに適用します",
-  "tipMainOpenOutput": "出力フォルダーを開く",
+  "tipMainShowFile": "ファイルをフォルダーで表示",
+  "tipMainStop": "停止",
+  "tipMainPrevious": "前のファイル",
+  "tipMainNext": "次のファイル",
+  "tipMainPlayerClose": "プレーヤーを閉じる",
   "lblMainDestSource": "ソースフォルダー",
   "ttlMainNotify": "変換完了",
   "tabStgNotifications": "通知",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "ミュート解除",
   "tipWorkVolume": "音量",
   "lblWorkCommand": "ffmpeg コマンド",
-  "btnWorkCommandCopy": "コピー",
   "tipWorkCommandCopy": "コマンドをクリップボードにコピー",
   "msgWorkCommandNone": "コマンドを表示するにはファイルを選択してください。ffmpeg がそのファイルに対して実行します",
   "tipWorkFold": "画像の下のパネルを非表示",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "でエンコード",
   "lblStgEncoderSoftware": "ソフトウェア",
   "lblStgEncoderAuto": "自動",
-  "msgStgEncoderHint": "プリセットのエンジンは「デフォルトエンコーダーを使用」に設定されています。ソフトウェアはどのマシンでも同じファイルを出力します。グラフィックカードは高速ですが、同じ品質でより大きなファイルを作成します。自動設定はNVIDIA、次にAMD、次にIntelを試します。カードが提供できる以上のもの（10ビット、ターゲットビットレート、x265パラメーター、チューン）を必要とするプリセットは常にソフトウェアでエンコードされ、このマシンにないカードも同様です。"
+  "msgStgEncoderHint": "プリセットのエンジンは「デフォルトエンコーダーを使用」に設定されています。ソフトウェアはどのマシンでも同じファイルを出力します。グラフィックカードは高速ですが、同じ品質でより大きなファイルを作成します。自動設定はNVIDIA、次にAMD、次にIntelを試します。カードが提供できる以上のもの（10ビット、ターゲットビットレート、x265パラメーター、チューン）を必要とするプリセットは常にソフトウェアでエンコードされ、このマシンにないカードも同様です。",
+  "btnMainEncode": "エンコード",
+  "btnWorkCommandCopy": "コピー"
 }

@@ -32,7 +32,6 @@
   "btnMainClear": "Vymazať zoznam",
   "btnMainStop": "Zastaviť",
   "btnMainApply": "Použiť",
-  "btnMainConvert": "Konvertovať",
   "lblMainPreset": "Predvoľba",
   "lblMainVideo": "Video",
   "lblFxNone": "Žiadne",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} súborov pripravených na konverziu",
   "msgMainSelected": "Vybratých: {n}",
   "tipMainApply": "Použiť tieto voľby na vybrané súbory",
-  "tipMainOpenOutput": "Otvoriť výstupný priečinok",
+  "tipMainShowFile": "Zobraziť súbor v jeho priečinku",
+  "tipMainStop": "Zastaviť",
+  "tipMainPrevious": "Predchádzajúci súbor",
+  "tipMainNext": "Ďalší súbor",
+  "tipMainPlayerClose": "Zavrieť prehrávač",
   "lblMainDestSource": "Zdrojový priečinok",
   "ttlMainNotify": "Konverzia dokončená",
   "tabStgNotifications": "Oznámenia",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Zrušiť stlmenie",
   "tipWorkVolume": "Hlasitosť",
   "lblWorkCommand": "Príkaz ffmpeg",
-  "btnWorkCommandCopy": "Kopírovať",
   "tipWorkCommandCopy": "Skopírovať príkaz do schránky",
   "msgWorkCommandNone": "Vyberte súbor pre zobrazenie príkazu, ktorý preň ffmpeg spustí",
   "tipWorkFold": "Skryť panel pod obrázkom",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Kódovať pomocou",
   "lblStgEncoderSoftware": "Softvér",
   "lblStgEncoderAuto": "Automaticky",
-  "msgStgEncoderHint": "Kodér pre predvoľby je nastavený na „Použiť predvolený kodér“. Softvér poskytuje rovnaký súbor na každom počítači. Grafická karta je rýchlejšia, ale vytvára väčšie súbory pri rovnakej kvalite; Automaticky skúša NVIDIA, potom AMD, potom Intel. Predvoľba, ktorá vyžaduje viac, než karta tu poskytuje (10-bit, cieľový dátový tok, parametre x265, ladenie), je vždy kódovaná softvérovo, rovnako ako karta, ktorú tento počítač nemá."
+  "msgStgEncoderHint": "Kodér pre predvoľby je nastavený na „Použiť predvolený kodér“. Softvér poskytuje rovnaký súbor na každom počítači. Grafická karta je rýchlejšia, ale vytvára väčšie súbory pri rovnakej kvalite; Automaticky skúša NVIDIA, potom AMD, potom Intel. Predvoľba, ktorá vyžaduje viac, než karta tu poskytuje (10-bit, cieľový dátový tok, parametre x265, ladenie), je vždy kódovaná softvérovo, rovnako ako karta, ktorú tento počítač nemá.",
+  "btnMainEncode": "Kódovať",
+  "btnWorkCommandCopy": "Kopírovať"
 }

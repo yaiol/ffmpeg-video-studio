@@ -32,7 +32,6 @@
   "btnMainClear": "Listeyi temizle",
   "btnMainStop": "Durdur",
   "btnMainApply": "Uygula",
-  "btnMainConvert": "Dönüştür",
   "lblMainPreset": "Ön ayar",
   "lblMainVideo": "Video",
   "lblFxNone": "Yok",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} dosya dönüştürmeye hazır",
   "msgMainSelected": "{n} seçili",
   "tipMainApply": "Bu seçimleri seçili dosyalara uygula",
-  "tipMainOpenOutput": "Çıktı klasörünü aç",
+  "tipMainShowFile": "Dosyayı klasöründe göster",
+  "tipMainStop": "Durdur",
+  "tipMainPrevious": "Önceki dosya",
+  "tipMainNext": "Sonraki dosya",
+  "tipMainPlayerClose": "Oynatıcıyı kapat",
   "lblMainDestSource": "Kaynak Klasör",
   "ttlMainNotify": "Dönüştürme tamamlandı",
   "tabStgNotifications": "Bildirimler",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Sesi aç",
   "tipWorkVolume": "Ses",
   "lblWorkCommand": "ffmpeg komutu",
-  "btnWorkCommandCopy": "Kopyala",
   "tipWorkCommandCopy": "Komutu panoya kopyala",
   "msgWorkCommandNone": "ffmpeg'in çalıştıracağı komutu görmek için bir dosya seçin",
   "tipWorkFold": "Resmin altındaki paneli gizle",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Şununla kodla",
   "lblStgEncoderSoftware": "Yazılım",
   "lblStgEncoderAuto": "Otomatik",
-  "msgStgEncoderHint": "Ön ayarlar için motor \"Varsayılan kodlayıcıyı kullan\" olarak ayarlanmıştır. Yazılım her makinede aynı dosyayı verir. Bir grafik kartı daha hızlıdır ancak aynı kalitede daha büyük dosyalar oluşturur; Otomatik, önce NVIDIA'yı, sonra AMD'yi, sonra Intel'i dener. Bir kartın burada sağlayabileceğinden daha fazlasını gerektiren bir ön ayar (10-bit, hedef bit hızı, x265 parametreleri, ayar) her zaman yazılımla kodlanır, bu makinede bulunmayan bir kart da öyle."
+  "msgStgEncoderHint": "Ön ayarlar için motor \"Varsayılan kodlayıcıyı kullan\" olarak ayarlanmıştır. Yazılım her makinede aynı dosyayı verir. Bir grafik kartı daha hızlıdır ancak aynı kalitede daha büyük dosyalar oluşturur; Otomatik, önce NVIDIA'yı, sonra AMD'yi, sonra Intel'i dener. Bir kartın burada sağlayabileceğinden daha fazlasını gerektiren bir ön ayar (10-bit, hedef bit hızı, x265 parametreleri, ayar) her zaman yazılımla kodlanır, bu makinede bulunmayan bir kart da öyle.",
+  "btnMainEncode": "Kodla",
+  "btnWorkCommandCopy": "Kopyala"
 }

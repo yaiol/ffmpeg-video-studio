@@ -32,7 +32,6 @@
   "btnMainClear": "Lista törlése",
   "btnMainStop": "Leállítás",
   "btnMainApply": "Alkalmaz",
-  "btnMainConvert": "Konvertálás",
   "lblMainPreset": "Előbeállítás",
   "lblMainVideo": "Videó",
   "lblFxNone": "Nincs",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} fájl készen áll az átalakításra",
   "msgMainSelected": "{n} kiválasztva",
   "tipMainApply": "Alkalmazza ezeket a beállításokat a kiválasztott fájlokra",
-  "tipMainOpenOutput": "Kimeneti mappa megnyitása",
+  "tipMainShowFile": "Fájl megjelenítése a mappájában",
+  "tipMainStop": "Leállítás",
+  "tipMainPrevious": "Előző fájl",
+  "tipMainNext": "Következő fájl",
+  "tipMainPlayerClose": "Lejátszó bezárása",
   "lblMainDestSource": "Forrásmappa",
   "ttlMainNotify": "Konverzió befejezve",
   "tabStgNotifications": "Értesítések",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Némítás feloldása",
   "tipWorkVolume": "Hangerő",
   "lblWorkCommand": "ffmpeg parancs",
-  "btnWorkCommandCopy": "Másolás",
   "tipWorkCommandCopy": "Parancs másolása a vágólapra",
   "msgWorkCommandNone": "Válasszon ki egy fájlt, hogy lássa az ffmpeg által futtatandó parancsot",
   "tipWorkFold": "Panel elrejtése a kép alatt",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Kódolás ezzel:",
   "lblStgEncoderSoftware": "Szoftver",
   "lblStgEncoderAuto": "Automatikus",
-  "msgStgEncoderHint": "Az előbeállításokhoz használt motor „Alapértelmezett kódoló használata” értékre van állítva. A szoftver minden gépen ugyanazt a fájlt adja. Egy grafikus kártya gyorsabb, de nagyobb fájlokat készít azonos minőség mellett; az Automatikus először az NVIDIA-t, majd az AMD-t, majd az Intelt próbálja. Az a beállítás, amely többet igényel, mint amit egy kártya itt nyújtani tud (10-bit, cél bitráta, x265 paraméterek, hangolás), mindig szoftveresen kódolódik, ahogy az a kártya is, amellyel ez a gép nem rendelkezik."
+  "msgStgEncoderHint": "Az előbeállításokhoz használt motor „Alapértelmezett kódoló használata” értékre van állítva. A szoftver minden gépen ugyanazt a fájlt adja. Egy grafikus kártya gyorsabb, de nagyobb fájlokat készít azonos minőség mellett; az Automatikus először az NVIDIA-t, majd az AMD-t, majd az Intelt próbálja. Az a beállítás, amely többet igényel, mint amit egy kártya itt nyújtani tud (10-bit, cél bitráta, x265 paraméterek, hangolás), mindig szoftveresen kódolódik, ahogy az a kártya is, amellyel ez a gép nem rendelkezik.",
+  "btnMainEncode": "Kódolás",
+  "btnWorkCommandCopy": "Másolás"
 }

@@ -32,7 +32,6 @@
   "btnMainClear": "Rensa listan",
   "btnMainStop": "Stoppa",
   "btnMainApply": "Verkställ",
-  "btnMainConvert": "Konvertera",
   "lblMainPreset": "Förinställning",
   "lblMainVideo": "Video",
   "lblFxNone": "Ingen",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} fil(er) redo för konvertering",
   "msgMainSelected": "{n} markerade",
   "tipMainApply": "Verkställ dessa val på de markerade filerna",
-  "tipMainOpenOutput": "Öppna utdatamappen",
+  "tipMainShowFile": "Visa filen i dess mapp",
+  "tipMainStop": "Stoppa",
+  "tipMainPrevious": "Föregående fil",
+  "tipMainNext": "Nästa fil",
+  "tipMainPlayerClose": "Stäng spelaren",
   "lblMainDestSource": "Källmapp",
   "ttlMainNotify": "Konvertering klar",
   "tabStgNotifications": "Aviseringar",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Ljud på",
   "tipWorkVolume": "Volym",
   "lblWorkCommand": "ffmpeg-kommando",
-  "btnWorkCommandCopy": "Kopiera",
   "tipWorkCommandCopy": "Kopiera kommandot till urklipp",
   "msgWorkCommandNone": "Välj en fil för att se kommandot som ffmpeg kommer att köra för den",
   "tipWorkFold": "Dölj panelen under bilden",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Koda med",
   "lblStgEncoderSoftware": "Programvara",
   "lblStgEncoderAuto": "Automatisk",
-  "msgStgEncoderHint": "Motorn för förinställningarna är inställd på \"Använd standardkodare\". Programvaran ger samma fil på varje maskin. Ett grafikkort är snabbare men skapar större filer med samma kvalitet; Automatisk försöker NVIDIA, sedan AMD, sedan Intel. En förinställning som kräver mer än ett kort kan ge här (10-bit, en målbithastighet, x265-parametrar, en justering) kodas alltid i programvara, liksom ett kort som denna maskin inte har."
+  "msgStgEncoderHint": "Motorn för förinställningarna är inställd på \"Använd standardkodare\". Programvaran ger samma fil på varje maskin. Ett grafikkort är snabbare men skapar större filer med samma kvalitet; Automatisk försöker NVIDIA, sedan AMD, sedan Intel. En förinställning som kräver mer än ett kort kan ge här (10-bit, en målbithastighet, x265-parametrar, en justering) kodas alltid i programvara, liksom ett kort som denna maskin inte har.",
+  "btnMainEncode": "Koda",
+  "btnWorkCommandCopy": "Kopiera"
 }

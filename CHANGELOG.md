@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.3 — 2026-11-15
+
+- A converted file plays inside the app: a finished row has a play button that opens a player with the video's picture, a position slider, previous, play / pause, stop, next, the volume and close. When a file ends, the next converted file of the list follows, and every format ffmpeg reads plays
+- The player sits above the batch list; in the work view it takes the place of the preview until it is closed
+- A finished row has a Show the file in its folder button, which opens the file manager with the file selected. It replaces the Open the output folder button
+- The Convert button is now a labelled Encode button
+- The work view has a Stop button beside play: it stops the playback and goes back to the start of the cut, or of the file when there is no cut
+- The work view's buttons that set the start and the end of the cut, go to the start and the end, and clear the cut are drawn as icons instead of characters
+- The work view's file list shows a small picture taken from each video
+- The sound band under the film strip is drawn with finer bars
+- The macOS build installs the dx CLI built for the runner's own processor and checks that it starts
+
 ## 2.0.2 — 2026-11-14
 
 - New reminder button in the title bar when a newer version is out: it stays after the new-version card is closed or hidden with Don't show again, and a click reopens the card with the release notes and the download link

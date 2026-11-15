@@ -32,7 +32,6 @@
   "btnMainClear": "Očisti popis",
   "btnMainStop": "Zaustavi",
   "btnMainApply": "Primijeni",
-  "btnMainConvert": "Pretvori",
   "lblMainPreset": "Predložak",
   "lblMainVideo": "Video",
   "lblFxNone": "Nijedno",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} datoteka spremno za pretvorbu",
   "msgMainSelected": "{n} odabrano",
   "tipMainApply": "Primijeni ove odabire na odabrane datoteke",
-  "tipMainOpenOutput": "Otvorite izlaznu mapu",
+  "tipMainShowFile": "Prikaži datoteku u njezinoj mapi",
+  "tipMainStop": "Zaustavi",
+  "tipMainPrevious": "Prethodna datoteka",
+  "tipMainNext": "Sljedeća datoteka",
+  "tipMainPlayerClose": "Zatvori reproduktor",
   "lblMainDestSource": "Izvorna mapa",
   "ttlMainNotify": "Pretvorba završena",
   "tabStgNotifications": "Obavijesti",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Uključi zvuk",
   "tipWorkVolume": "Glasnoća",
   "lblWorkCommand": "ffmpeg naredba",
-  "btnWorkCommandCopy": "Kopiraj",
   "tipWorkCommandCopy": "Kopiraj naredbu u međuspremnik",
   "msgWorkCommandNone": "Odaberite datoteku da biste vidjeli naredbu koju će ffmpeg pokrenuti za nju",
   "tipWorkFold": "Sakrij ploču ispod slike",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Kodiraj s",
   "lblStgEncoderSoftware": "Softver",
   "lblStgEncoderAuto": "Automatski",
-  "msgStgEncoderHint": "Motor za unaprijed postavljene postavke postavljen je na „Koristi zadani koder“. Softver daje istu datoteku na svakom računalu. Grafička kartica je brža, ali stvara veće datoteke iste kvalitete; Automatski pokušava NVIDIA, zatim AMD, zatim Intel. Unaprijed postavljena postavka koja zahtijeva više od onoga što kartica ovdje pruža (10-bit, ciljni bitrate, x265 parametri, podešavanje) uvijek se kodira softverski, kao i kartica koju ovo računalo nema."
+  "msgStgEncoderHint": "Motor za unaprijed postavljene postavke postavljen je na „Koristi zadani koder“. Softver daje istu datoteku na svakom računalu. Grafička kartica je brža, ali stvara veće datoteke iste kvalitete; Automatski pokušava NVIDIA, zatim AMD, zatim Intel. Unaprijed postavljena postavka koja zahtijeva više od onoga što kartica ovdje pruža (10-bit, ciljni bitrate, x265 parametri, podešavanje) uvijek se kodira softverski, kao i kartica koju ovo računalo nema.",
+  "btnMainEncode": "Kodiraj",
+  "btnWorkCommandCopy": "Kopiraj"
 }

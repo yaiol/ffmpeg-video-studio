@@ -11,10 +11,11 @@ use crate::{
     runner::{RUNNER, RunState},
     settings::{RunChoice, Settings},
 };
+use crate::player::{Player, PlayerPane, Track};
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
-    icons::ld_icons::{LdAudioLines, LdEraser, LdFilePlus, LdFolder, LdFolderOpen, LdFolderPlus, LdFilm, LdListChecks, LdPlay, LdReplace, LdScaling, LdScissors, LdVideo, LdSparkles, LdSquare, LdVolume2, LdX},
+    icons::ld_icons::{LdAudioLines, LdEraser, LdFilePlus, LdFolder, LdFolderSearch, LdPause, LdFolderPlus, LdFilm, LdListChecks, LdPlay, LdReplace, LdScaling, LdScissors, LdVideo, LdSparkles, LdSquare, LdVolume2, LdX},
 };
 use engine::{JobSpec, JobStatus, Overwrite, Trim, download::DownloadState};
 use std::{
@@ -50,7 +51,7 @@ fn thumbnail(path: &Path) -> Option<String> {
 
 /// A row's picture: the file's own frame once it is made, the film icon until then (and for a file with none).
 #[component]
-fn RowThumb(path: PathBuf) -> Element {
+pub(crate) fn RowThumb(path: PathBuf) -> Element {
     let pic = use_resource(use_reactive!(|path| async move { tokio::task::spawn_blocking(move || thumbnail(&path)).await.ok().flatten() }));
     match pic.read().clone().flatten() {
         Some(src) => rsx! { img { class: "converter-thumb", src: "{src}", draggable: false } },
@@ -199,6 +200,7 @@ pub fn Converter(
 
     let lang = settings.read().lang.clone();
     let t = |key: &str| i18n::t(&lang, key);
+    let player = Player::new();
 
     let mut add_paths = move |paths: Vec<PathBuf>| {
         // Added files take the panel's choices as they are now, and become the selection.
@@ -336,7 +338,6 @@ pub fn Converter(
     dest_options.extend(s.destinations.iter().map(|d| (d.id.clone(), d.name.clone())));
     dest_options.push((engine::destination::PICK_ID.to_owned(), t("lblMainDestPick")));
     let destination_id = s.destination_id.clone();
-    let saved_folder = s.destination_by(&s.destination_id).folder_path();
     let parallel = s.parallel;
     let overwrite = s.overwrite;
     drop(s);
@@ -345,7 +346,7 @@ pub fn Converter(
     let s_main_add_folder = t("btnMainAddFolder");
     let s_main_clear = t("btnMainClear");
     let s_main_stop = t("btnMainStop");
-    let s_main_convert = t("btnMainConvert");
+    let s_main_encode = t("btnMainEncode");
     let s_main_preset = t("lblMainVideo");
     let s_lbl_size = t("lblWorkSize");
     let s_lbl_audio = t("lblWorkAudio");
@@ -376,7 +377,6 @@ pub fn Converter(
     let s_main_overwrite_overwrite = t("lblMainOverwriteOverwrite");
     let s_main_overwrite_rename = t("lblMainOverwriteRename");
     let s_main_parallel = t("tipMainParallel");
-    let s_main_open_output = t("tipMainOpenOutput");
     let s_main_apply = t("btnMainApply");
     let s_main_apply_tip = t("tipMainApply");
     let sel_now = selected.read().clone();
@@ -428,19 +428,19 @@ pub fn Converter(
         None
     };
 
-    // Where "open the output folder" goes: the folder of the newest finished file - which is right
-    // for "beside the source" too - and otherwise the chosen folder.
-    let open_target: Option<PathBuf> = statuses
-        .read()
-        .iter()
-        .filter_map(|(id, s)| match s {
-            JobStatus::Done { output } => Some((*id, output.clone())),
-            _ => None,
-        })
-        .max_by_key(|(id, _)| *id)
-        .and_then(|(_, out)| out.parent().map(Path::to_path_buf))
-        .or_else(|| saved_folder.filter(|p| p.is_absolute()))
-        .filter(|p| p.is_dir());
+    // The converted files in list order: what the player steps through.
+    let queue: Vec<Track> = {
+        let st = statuses.read();
+        items
+            .read()
+            .iter()
+            .filter_map(|i| match st.get(&i.id) {
+                Some(JobStatus::Done { output }) => Some(Track::of(output)),
+                _ => None,
+            })
+            .collect()
+    };
+
 
     rsx! {
         // ⚠ CLAUDE: the header holds the file actions only (icon-only, tooltips). The choices that shape a
@@ -485,6 +485,7 @@ pub fn Converter(
         if let Some(popup) = popup {
             FfmpegPopup { lang: lang.clone(), popup, on_close: move |_| dismissed.set(true) }
         }
+        PlayerPane { player, queue, lang: lang.clone(), away: !active }
         // ⚠ CLAUDE: tabindex makes the list the thing a click focuses, which is what lets Ctrl+A reach it;
         // a click on the empty part clears the selection (a row's own click stops here).
         div {
@@ -517,6 +518,13 @@ pub fn Converter(
                         Some(JobStatus::Cancelled) => (t("msgMainStatusCancelled"), String::new(), "idle"),
                         Some(JobStatus::Failed { reason }) => (t("msgMainStatusFailed"), reason.clone(), "err"),
                     };
+                    // A finished row shows two buttons in the place of its badge: play the file in the player, show it in its folder.
+                    let done_file = match &status {
+                        Some(JobStatus::Done { output }) => Some(output.clone()),
+                        _ => None,
+                    };
+                    let sounding = done_file.as_ref().is_some_and(|f| player.is_sounding(f));
+                    let (s_play, s_show) = (if sounding { t("tipWorkPause") } else { t("tipWorkPlay") }, t("tipMainShowFile"));
                     let id = item.id;
                     let path = item.path.display().to_string();
                     let tip = if active { t("tipMainCancel") } else { t("tipMainRemove") };
@@ -605,7 +613,35 @@ pub fn Converter(
                                     }
                                 }
                             }
-                            if !badge.is_empty() {
+                            if let Some(file) = done_file {
+                                button {
+                                    class: "uis-btn ico subtle",
+                                    title: "{s_play}",
+                                    "aria-label": "{s_play}",
+                                    onclick: {
+                                        let track = Track::of(&file);
+                                        move |e: MouseEvent| {
+                                            e.stop_propagation();
+                                            player.play(track.clone());
+                                        }
+                                    },
+                                    if sounding {
+                                        Icon { width: 14, height: 14, icon: LdPause }
+                                    } else {
+                                        Icon { width: 14, height: 14, icon: LdPlay }
+                                    }
+                                }
+                                button {
+                                    class: "uis-btn ico subtle",
+                                    title: "{s_show}",
+                                    "aria-label": "{s_show}",
+                                    onclick: move |e: MouseEvent| {
+                                        e.stop_propagation();
+                                        show_in_folder(&file);
+                                    },
+                                    Icon { width: 14, height: 14, icon: LdFolderSearch }
+                                }
+                            } else if !badge.is_empty() {
                                 span { class: "uis-lvw-item-badge converter-state converter-state-{state}", title: "{detail}", "{badge}" }
                             }
                             button {
@@ -834,7 +870,7 @@ pub fn Converter(
             div { class: "converter-panel-run uis-cmp-run",
                 div { class: "uis-barh-grp",
                     select {
-                        class: "uis-ddn-std",
+                        class: "uis-ddn-std digit",
                         title: "{s_main_parallel}",
                         "aria-label": "{s_main_parallel}",
                         value: "{parallel}",
@@ -857,25 +893,11 @@ pub fn Converter(
                         }
                     }
                     button {
-                        class: "uis-btn ico",
-                        title: "{s_main_convert}",
-                        "aria-label": "{s_main_convert}",
+                        class: "uis-btn primary",
                         disabled: ffmpeg_missing || !have_items || busy || trim_invalid,
                         onclick: convert,
-                        Icon { width: 14, height: 14, icon: LdPlay }
+                        "{s_main_encode}"
                     }
-                }
-                button {
-                    class: "uis-btn ico",
-                    title: "{s_main_open_output}",
-                    "aria-label": "{s_main_open_output}",
-                    disabled: open_target.is_none(),
-                    onclick: move |_| {
-                        if let Some(p) = &open_target {
-                            let _ = open::that(p);
-                        }
-                    },
-                    Icon { width: 14, height: 14, icon: LdFolderOpen }
                 }
             }
         }
@@ -898,5 +920,20 @@ mod tests {
         assert_eq!(range_between(&ids, 13, 11), vec![11, 12, 13]);
         assert_eq!(range_between(&ids, 12, 12), vec![12]);
         assert_eq!(range_between(&ids, 99, 12), vec![12], "an anchor no longer in the list selects just the clicked row");
+    }
+}
+
+/// Open the file manager with the finished file selected (its folder where the platform cannot select).
+pub(crate) fn show_in_folder(file: &Path) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let arg = format!("/select,\"{}\"", file.display());
+        if std::process::Command::new("explorer").raw_arg(arg).spawn().is_ok() {
+            return;
+        }
+    }
+    if let Some(dir) = file.parent() {
+        let _ = open::that(dir);
     }
 }

@@ -32,7 +32,6 @@
   "btnMainClear": "I-clear ang listahan",
   "btnMainStop": "Itigil",
   "btnMainApply": "Ilapat",
-  "btnMainConvert": "I-convert",
   "lblMainPreset": "Preset",
   "lblMainVideo": "Video",
   "lblFxNone": "Wala",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} file handa na para sa conversion",
   "msgMainSelected": "{n} napili",
   "tipMainApply": "Ilapat ang mga pagpipiliang ito sa mga napiling file",
-  "tipMainOpenOutput": "Buksan ang output folder",
+  "tipMainShowFile": "Ipakita ang file sa folder nito",
+  "tipMainStop": "Itigil",
+  "tipMainPrevious": "Nakaraang file",
+  "tipMainNext": "Susunod na file",
+  "tipMainPlayerClose": "Isara ang player",
   "lblMainDestSource": "Pinagmulang Folder",
   "ttlMainNotify": "Tapos na ang conversion",
   "tabStgNotifications": "Mga Notification",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "I-unmute",
   "tipWorkVolume": "Volume",
   "lblWorkCommand": "ffmpeg command",
-  "btnWorkCommandCopy": "Kopyahin",
   "tipWorkCommandCopy": "Kopyahin ang command sa clipboard",
   "msgWorkCommandNone": "Pumili ng file para makita ang command na tatakbuhin ng ffmpeg para dito",
   "tipWorkFold": "Itago ang panel sa ilalim ng larawan",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "I-encode gamit ang",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Awtomatiko",
-  "msgStgEncoderHint": "Ang engine para sa mga preset ay nakatakda sa \"Gamitin ang default encoder\". Nagbibigay ang software ng parehong file sa bawat makina. Mas mabilis ang graphics card ngunit gumagawa ng mas malalaking file sa parehong kalidad; Sinusubukan ng Awtomatiko ang NVIDIA, pagkatapos ay AMD, pagkatapos ay Intel. Ang isang preset na nangangailangan ng higit pa sa ibinibigay ng card dito (10-bit, isang target bitrate, x265 parameters, isang tune) ay palaging naka-encode sa software, at gayundin ang isang card na wala sa makinang ito."
+  "msgStgEncoderHint": "Ang engine para sa mga preset ay nakatakda sa \"Gamitin ang default encoder\". Nagbibigay ang software ng parehong file sa bawat makina. Mas mabilis ang graphics card ngunit gumagawa ng mas malalaking file sa parehong kalidad; Sinusubukan ng Awtomatiko ang NVIDIA, pagkatapos ay AMD, pagkatapos ay Intel. Ang isang preset na nangangailangan ng higit pa sa ibinibigay ng card dito (10-bit, isang target bitrate, x265 parameters, isang tune) ay palaging naka-encode sa software, at gayundin ang isang card na wala sa makinang ito.",
+  "btnMainEncode": "I-encode",
+  "btnWorkCommandCopy": "Kopyahin"
 }

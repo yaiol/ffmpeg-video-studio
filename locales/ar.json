@@ -32,7 +32,6 @@
   "btnMainClear": "مسح القائمة",
   "btnMainStop": "إيقاف",
   "btnMainApply": "تطبيق",
-  "btnMainConvert": "تحويل",
   "lblMainPreset": "إعداد مسبق",
   "lblMainVideo": "فيديو",
   "lblFxNone": "لا شيء",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} ملفات جاهزة للتحويل",
   "msgMainSelected": "{n} محدد",
   "tipMainApply": "تطبيق هذه الخيارات على الملفات المحددة",
-  "tipMainOpenOutput": "افتح مجلد الإخراج",
+  "tipMainShowFile": "عرض الملف في مجلده",
+  "tipMainStop": "إيقاف",
+  "tipMainPrevious": "الملف السابق",
+  "tipMainNext": "الملف التالي",
+  "tipMainPlayerClose": "إغلاق المشغل",
   "lblMainDestSource": "مجلد المصدر",
   "ttlMainNotify": "اكتمل التحويل",
   "tabStgNotifications": "إشعارات",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "إلغاء كتم الصوت",
   "tipWorkVolume": "مستوى الصوت",
   "lblWorkCommand": "أمر ffmpeg",
-  "btnWorkCommandCopy": "نسخ",
   "tipWorkCommandCopy": "انسخ الأمر إلى الحافظة",
   "msgWorkCommandNone": "حدد ملفًا لرؤية الأمر الذي سيشغله ffmpeg له",
   "tipWorkFold": "إخفاء اللوحة أسفل الصورة",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "التشفير باستخدام",
   "lblStgEncoderSoftware": "برنامج",
   "lblStgEncoderAuto": "تلقائي",
-  "msgStgEncoderHint": "المحرك للإعدادات المسبقة المعينة على \"استخدام المشفر الافتراضي\". يعطي البرنامج نفس الملف على كل جهاز. بطاقة الرسوميات أسرع ولكنها تنتج ملفات أكبر بنفس الجودة؛ يحاول التلقائي NVIDIA، ثم AMD، ثم Intel. الإعداد المسبق الذي يتطلب أكثر مما توفره البطاقة هنا (10-بت، معدل بت مستهدف، معلمات x265، ضبط) يتم ترميزه دائمًا في البرنامج، وكذلك البطاقة التي لا يمتلكها هذا الجهاز."
+  "msgStgEncoderHint": "المحرك للإعدادات المسبقة المعينة على \"استخدام المشفر الافتراضي\". يعطي البرنامج نفس الملف على كل جهاز. بطاقة الرسوميات أسرع ولكنها تنتج ملفات أكبر بنفس الجودة؛ يحاول التلقائي NVIDIA، ثم AMD، ثم Intel. الإعداد المسبق الذي يتطلب أكثر مما توفره البطاقة هنا (10-بت، معدل بت مستهدف، معلمات x265، ضبط) يتم ترميزه دائمًا في البرنامج، وكذلك البطاقة التي لا يمتلكها هذا الجهاز.",
+  "btnMainEncode": "ترميز",
+  "btnWorkCommandCopy": "نسخ"
 }

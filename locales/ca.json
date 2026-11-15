@@ -32,7 +32,6 @@
   "btnMainClear": "Neteja la llista",
   "btnMainStop": "Atura",
   "btnMainApply": "Aplica",
-  "btnMainConvert": "Converteix",
   "lblMainPreset": "Preajust",
   "lblMainVideo": "Vídeo",
   "lblFxNone": "Cap",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} fitxer(s) a punt per a la conversió",
   "msgMainSelected": "{n} seleccionats",
   "tipMainApply": "Aplica aquestes opcions als fitxers seleccionats",
-  "tipMainOpenOutput": "Obre la carpeta de sortida",
+  "tipMainShowFile": "Mostra el fitxer a la seva carpeta",
+  "tipMainStop": "Atura",
+  "tipMainPrevious": "Fitxer anterior",
+  "tipMainNext": "Fitxer següent",
+  "tipMainPlayerClose": "Tancar el reproductor",
   "lblMainDestSource": "Carpeta d'origen",
   "ttlMainNotify": "Conversió finalitzada",
   "tabStgNotifications": "Notificacions",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Activa el so",
   "tipWorkVolume": "Volum",
   "lblWorkCommand": "Ordre ffmpeg",
-  "btnWorkCommandCopy": "Copia",
   "tipWorkCommandCopy": "Copia l'ordre al porta-retalls",
   "msgWorkCommandNone": "Seleccioneu un fitxer per veure l'ordre que ffmpeg executarà per a ell",
   "tipWorkFold": "Amaga el panell sota la imatge",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Codifica amb",
   "lblStgEncoderSoftware": "Programari",
   "lblStgEncoderAuto": "Automàtic",
-  "msgStgEncoderHint": "El motor per als ajustos preestablerts configurat a \"Utilitza l'codificador per defecte\". El programari genera el mateix fitxer a cada màquina. Una targeta gràfica és més ràpida però crea fitxers més grans amb la mateixa qualitat; Automàtic prova NVIDIA, després AMD, després Intel. Un ajust preestablert que requereix més del que una targeta pot oferir aquí (10 bits, una taxa de bits objectiu, paràmetres x265, un ajust) sempre s'codifica per programari, igual que una targeta que aquesta màquina no té."
+  "msgStgEncoderHint": "El motor per als ajustos preestablerts configurat a \"Utilitza l'codificador per defecte\". El programari genera el mateix fitxer a cada màquina. Una targeta gràfica és més ràpida però crea fitxers més grans amb la mateixa qualitat; Automàtic prova NVIDIA, després AMD, després Intel. Un ajust preestablert que requereix més del que una targeta pot oferir aquí (10 bits, una taxa de bits objectiu, paràmetres x265, un ajust) sempre s'codifica per programari, igual que una targeta que aquesta màquina no té.",
+  "btnMainEncode": "Codifica",
+  "btnWorkCommandCopy": "Copia"
 }

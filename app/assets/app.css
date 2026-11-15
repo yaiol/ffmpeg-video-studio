@@ -37,7 +37,7 @@ body {
 /* The window's body: the file list takes what is left, the run's choices sit in a column of their own at
    the right. The panel is the catalog's .uis-pnl surface; this is layout only. */
 .converter-body { flex: 1; min-height: 0; display: flex; }
-.converter-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.converter-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-x: clip; }
 .converter-panel { width: 236px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; border-left: 1px solid var(--uis-border); overflow-y: auto; }
 /* The height of the strip under the preview: the file list and both drawers (colour, curves) are exactly this tall, the colour drawer's own height. */
 :root { --work-drawer-h: 240px; }
@@ -78,9 +78,7 @@ body {
 .wv-film-pic { flex: 1 1 0; min-width: 0; height: 100%; object-fit: cover; pointer-events: none; }
 .wv-film-dim { position: absolute; inset: 0; pointer-events: none; border-radius: 4px; background: linear-gradient(to right, rgba(0,0,0,.55) var(--in, 0%), transparent var(--in, 0%), transparent var(--out, 0%), rgba(0,0,0,.55) var(--out, 0%)); }
 /* The sound under the pictures: one bar per slice of the file, same width, so a moment is at the same place. */
-.wv-wave { position: relative; display: flex; align-items: center; gap: 1px; height: 44px; margin-top: 8px; z-index: 1; border-radius: 4px; background: color-mix(in srgb, var(--uis-text-mute) 15%, transparent); }
-.wv-wave > span { flex: 1 1 0; min-width: 0; background: var(--uis-accent); border-radius: 1px; }
-.wv-wave > span:first-child { margin-left: 0; }
+.wv-wave { position: relative; height: 44px; margin-top: 8px; z-index: 1; border-radius: 4px; background: color-mix(in srgb, var(--uis-text-mute) 15%, transparent); }
 .wv-timeline { position: absolute; inset: 0; -webkit-appearance: none; appearance: none; width: 100%; height: 100%; margin: 0; background: transparent; cursor: ew-resize; }
 .wv-timeline::-webkit-slider-runnable-track { height: 46px; background: transparent; }
 .wv-timeline::-webkit-slider-thumb { -webkit-appearance: none; width: 3px; height: 46px; background: var(--uis-danger); box-shadow: 0 0 0 1px rgba(255,255,255,.6); }
@@ -162,11 +160,6 @@ body {
 /* The curves drawer (work view): the graph and the buttons of the four curves beside it. */
 .wc-curve-body { display: flex; align-items: flex-start; justify-content: center; gap: 14px; }
 .wc-curve-side { display: flex; flex-direction: column; gap: 6px; }
-.wch-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-top: 6px; }
-.wch-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 10px; border: 1px solid var(--uis-border); border-radius: 8px; background: transparent; color: var(--uis-text-dim); cursor: pointer; font: inherit; }
-.wch-tile:hover { color: var(--uis-text); }
-.wch-tile.active { color: var(--uis-accent); border-color: var(--uis-accent); background: color-mix(in srgb, var(--uis-accent) 12%, transparent); }
-.wch-label { font-size: 11px; max-width: 150px; line-height: 1.2; text-align: center; }
 .wc-head .wc-preset-label { margin-left: 24px; }
 .wc-head .wc-preset { width: 170px; flex: 0 0 auto; margin-left: 6px; }
 
@@ -180,11 +173,6 @@ body {
 .wv-text-words { flex: 1 1 160px; min-width: 120px; resize: none; font-family: inherit; }
 
 /* The command panel (work view): the ffmpeg command of the selected file under the list, selectable, with a copy button. */
-.wcmd { flex: 0 0 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 8px; border-top: 1px solid var(--uis-border); }
-.wcmd-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.wcmd-title { font-size: 12px; font-weight: 600; color: var(--uis-accent, var(--uis-text-dim)); }
-.wcmd-text { max-height: 47px; overflow-y: auto; font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; user-select: text; padding: 4px 6px; border-radius: 6px; background: rgba(127, 127, 127, 0.12); }
-.wcmd-dim { color: var(--uis-text-dim); font-family: inherit; }
 
 .wfx-mixed { margin-left: 6px; opacity: 0.7; }
 .wc-mixed { opacity: 0.8; }
@@ -192,3 +180,12 @@ body {
 .wl-mode { width: 220px; flex: 0 0 auto; margin-left: 8px; }
 .wl-unit { font-size: 11px; color: var(--uis-text-dim); flex: 0 0 auto; }
 .wl-switch { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+
+/* The box of the player of the converted files: how tall it is, its padding and its border. What is in it is the catalog's UisPlayer. */
+.out-player { flex: 0 0 auto; display: flex; flex-direction: column; padding: 10px 12px 6px; border-bottom: 1px solid var(--uis-border); min-height: 0; }
+/* No file on it, or the other view is shown: the player waits out of sight. */
+.out-player.out-player-away { display: none; }
+/* Above the batch list it takes a share of the view; in the work view it stands in the preview's place, which is hidden meanwhile. */
+.out-player-video { flex: 0 0 55%; min-height: 260px; }
+.out-player-fill { flex: 1 1 0; min-height: 300px; border-bottom: 0; }
+.converter-main:has(> .out-player-fill) > .wv { display: none; }

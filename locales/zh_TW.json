@@ -32,7 +32,6 @@
   "btnMainClear": "清空列表",
   "btnMainStop": "停止",
   "btnMainApply": "套用",
-  "btnMainConvert": "轉換",
   "lblMainPreset": "預設",
   "lblMainVideo": "視訊",
   "lblFxNone": "無",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} 個檔案已準備好轉換",
   "msgMainSelected": "已選取 {n} 個",
   "tipMainApply": "將這些選擇套用到選取的檔案",
-  "tipMainOpenOutput": "開啟輸出資料夾",
+  "tipMainShowFile": "在資料夾中顯示檔案",
+  "tipMainStop": "停止",
+  "tipMainPrevious": "上一個檔案",
+  "tipMainNext": "下一個檔案",
+  "tipMainPlayerClose": "關閉播放器",
   "lblMainDestSource": "來源資料夾",
   "ttlMainNotify": "轉換完成",
   "tabStgNotifications": "通知",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "取消靜音",
   "tipWorkVolume": "音量",
   "lblWorkCommand": "ffmpeg 命令",
-  "btnWorkCommandCopy": "複製",
   "tipWorkCommandCopy": "將命令複製到剪貼簿",
   "msgWorkCommandNone": "選擇一個檔案以查看 ffmpeg 將為其執行的命令",
   "tipWorkFold": "隱藏圖片下方的面板",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "編碼方式",
   "lblStgEncoderSoftware": "軟體",
   "lblStgEncoderAuto": "自動",
-  "msgStgEncoderHint": "預設的編碼器引擎設定為「使用預設編碼器」。軟體編碼在每台機器上都會產生相同的檔案。顯示卡編碼速度更快，但在相同品質下會產生更大的檔案；自動模式會嘗試NVIDIA，然後是AMD，最後是Intel。需要顯示卡無法提供的更多功能（10位元、目標位元率、x265參數、調校）的預設始終透過軟體編碼，本機不具備的顯示卡也如此。"
+  "msgStgEncoderHint": "預設的編碼器引擎設定為「使用預設編碼器」。軟體編碼在每台機器上都會產生相同的檔案。顯示卡編碼速度更快，但在相同品質下會產生更大的檔案；自動模式會嘗試NVIDIA，然後是AMD，最後是Intel。需要顯示卡無法提供的更多功能（10位元、目標位元率、x265參數、調校）的預設始終透過軟體編碼，本機不具備的顯示卡也如此。",
+  "btnMainEncode": "編碼",
+  "btnWorkCommandCopy": "複製"
 }

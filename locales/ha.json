@@ -32,7 +32,6 @@
   "btnMainClear": "Share jerin",
   "btnMainStop": "Tsaya",
   "btnMainApply": "Aiwatar",
-  "btnMainConvert": "Canza",
   "lblMainPreset": "Saitin farko",
   "lblMainVideo": "Bidiyo",
   "lblFxNone": "Babu",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} fayiloli a shirye don canzawa",
   "msgMainSelected": "{n} an zaɓa",
   "tipMainApply": "Aiwatar da waɗannan zaɓuɓɓuka ga fayilolin da aka zaɓa",
-  "tipMainOpenOutput": "Bude babban fayil ɗin fitarwa",
+  "tipMainShowFile": "Nuna fayil a cikin babban fayil",
+  "tipMainStop": "Tsaya",
+  "tipMainPrevious": "Fayil na baya",
+  "tipMainNext": "Fayil na gaba",
+  "tipMainPlayerClose": "Rufe mai kunnawa",
   "lblMainDestSource": "Jakar Tushe",
   "ttlMainNotify": "An gama canzawa",
   "tabStgNotifications": "Sanarwa",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Kunna sauti",
   "tipWorkVolume": "Ƙarar sauti",
   "lblWorkCommand": "umarnin ffmpeg",
-  "btnWorkCommandCopy": "Kwafi",
   "tipWorkCommandCopy": "Kwafi umarnin zuwa allon rubutu",
   "msgWorkCommandNone": "Zaɓi fayil don ganin umarnin da ffmpeg zai gudanar masa",
   "tipWorkFold": "Boye allon da ke ƙarƙashin hoton",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Sarrafa bayanai da",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Mai sarrafa kansa",
-  "msgStgEncoderHint": "Injin don saitunan da aka saita zuwa \"Yi amfani da mai sarrafa bayanai na asali\". Software yana ba da fayil iri ɗaya a kowace na'ura. Katin zane yana da sauri amma yana yin manyan fayiloli a daidai inganci; Mai sarrafa kansa yana gwada NVIDIA, sannan AMD, sannan Intel. Saitin da ke buƙatar fiye da abin da katin zai iya bayarwa a nan (10-bit, adadin bitrate da aka nufa, sigogin x265, gyara) koyaushe ana sarrafa shi a cikin software, haka kuma katin da wannan na'urar ba ta da shi."
+  "msgStgEncoderHint": "Injin don saitunan da aka saita zuwa \"Yi amfani da mai sarrafa bayanai na asali\". Software yana ba da fayil iri ɗaya a kowace na'ura. Katin zane yana da sauri amma yana yin manyan fayiloli a daidai inganci; Mai sarrafa kansa yana gwada NVIDIA, sannan AMD, sannan Intel. Saitin da ke buƙatar fiye da abin da katin zai iya bayarwa a nan (10-bit, adadin bitrate da aka nufa, sigogin x265, gyara) koyaushe ana sarrafa shi a cikin software, haka kuma katin da wannan na'urar ba ta da shi.",
+  "btnMainEncode": "Kodawa",
+  "btnWorkCommandCopy": "Kwafi"
 }

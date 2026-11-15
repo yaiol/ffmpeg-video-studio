@@ -1,0 +1,26 @@
+/* uis-ctl-player.css — the Player control (lib/uis-ctl-player.jsx)
+   ═══════════════════════════════════════════════════════════════════════════
+   An OPTIONAL control's skin, so it is its own file: the sync copies a catalog
+   CSS into an app only when that app uses it. It rides with the component by
+   STEM, and the jsx side-effect-imports it.
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Player — a file being played (uis-ctl-player.jsx): the title, the picture of a video, the two times, the position,
+   then one bar of buttons. It fills the box the app puts it in: how tall that box is, its padding and its border are
+   the app's. The picture takes whatever height the rest leaves. The position is the catalog's `.uis-sld-timeline`
+   (the same bar as under the waveform), the volume a `.uis-sld compact`. */
+.uis-ply { flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0; }
+.uis-ply-info { display: flex; align-items: center; gap: 8px; min-height: 16px; }
+.uis-ply-title { font-size: 12px; font-weight: 600; color: var(--uis-text-dim); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uis-ply-error { font-size: 12px; color: var(--uis-danger); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uis-ply-video { flex: 1; min-height: 120px; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 6px; overflow: hidden; }
+.uis-ply-picture { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.uis-ply-times { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.uis-ply-now { color: var(--uis-danger); }
+.uis-ply-length { color: var(--uis-accent); }
+.uis-ply-bar { display: flex; align-items: center; gap: 4px; }
+.uis-ply-vol-icon { display: flex; align-items: center; margin-left: 4px; color: var(--uis-text-dim); }
+.uis-ply-vol { width: 80px; margin: 0 4px; }

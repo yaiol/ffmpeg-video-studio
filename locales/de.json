@@ -32,7 +32,6 @@
   "btnMainClear": "Liste leeren",
   "btnMainStop": "Stoppen",
   "btnMainApply": "Anwenden",
-  "btnMainConvert": "Konvertieren",
   "lblMainPreset": "Voreinstellung",
   "lblMainVideo": "Video",
   "lblFxNone": "Keine",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} Datei(en) bereit zur Konvertierung",
   "msgMainSelected": "{n} ausgewählt",
   "tipMainApply": "Diese Auswahl auf die ausgewählten Dateien anwenden",
-  "tipMainOpenOutput": "Ausgabeordner öffnen",
+  "tipMainShowFile": "Datei im Ordner anzeigen",
+  "tipMainStop": "Stoppen",
+  "tipMainPrevious": "Vorherige Datei",
+  "tipMainNext": "Nächste Datei",
+  "tipMainPlayerClose": "Player schließen",
   "lblMainDestSource": "Quellordner",
   "ttlMainNotify": "Konvertierung abgeschlossen",
   "tabStgNotifications": "Benachrichtigungen",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Stummschaltung aufheben",
   "tipWorkVolume": "Lautstärke",
   "lblWorkCommand": "ffmpeg-Befehl",
-  "btnWorkCommandCopy": "Kopieren",
   "tipWorkCommandCopy": "Befehl in die Zwischenablage kopieren",
   "msgWorkCommandNone": "Wählen Sie eine Datei aus, um den ffmpeg-Befehl dafür anzuzeigen",
   "tipWorkFold": "Panel unter dem Bild ausblenden",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Kodieren mit",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Automatisch",
-  "msgStgEncoderHint": "Die Engine für die Voreinstellungen ist auf „Standard-Encoder verwenden“ eingestellt. Software erzeugt auf jedem Rechner die gleiche Datei. Eine Grafikkarte ist schneller, erzeugt aber größere Dateien bei gleicher Qualität; Automatisch versucht NVIDIA, dann AMD, dann Intel. Eine Voreinstellung, die mehr erfordert, als eine Karte hier bieten kann (10-Bit, eine Zielbitrate, x265-Parameter, ein Tune), wird immer in Software kodiert, ebenso wie eine Karte, die dieser Rechner nicht besitzt."
+  "msgStgEncoderHint": "Die Engine für die Voreinstellungen ist auf „Standard-Encoder verwenden“ eingestellt. Software erzeugt auf jedem Rechner die gleiche Datei. Eine Grafikkarte ist schneller, erzeugt aber größere Dateien bei gleicher Qualität; Automatisch versucht NVIDIA, dann AMD, dann Intel. Eine Voreinstellung, die mehr erfordert, als eine Karte hier bieten kann (10-Bit, eine Zielbitrate, x265-Parameter, ein Tune), wird immer in Software kodiert, ebenso wie eine Karte, die dieser Rechner nicht besitzt.",
+  "btnMainEncode": "Kodieren",
+  "btnWorkCommandCopy": "Kopieren"
 }

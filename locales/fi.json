@@ -32,7 +32,6 @@
   "btnMainClear": "Tyhjennä lista",
   "btnMainStop": "Pysäytä",
   "btnMainApply": "Käytä",
-  "btnMainConvert": "Muunna",
   "lblMainPreset": "Esiasetus",
   "lblMainVideo": "Video",
   "lblFxNone": "Ei mitään",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} tiedostoa valmiina muunnokseen",
   "msgMainSelected": "{n} valittu",
   "tipMainApply": "Käytä näitä valintoja valittuihin tiedostoihin",
-  "tipMainOpenOutput": "Avaa tulostuskansio",
+  "tipMainShowFile": "Näytä tiedosto sen kansiossa",
+  "tipMainStop": "Pysäytä",
+  "tipMainPrevious": "Edellinen tiedosto",
+  "tipMainNext": "Seuraava tiedosto",
+  "tipMainPlayerClose": "Sulje soitin",
   "lblMainDestSource": "Lähdekansio",
   "ttlMainNotify": "Muunnos valmis",
   "tabStgNotifications": "Ilmoitukset",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Poista mykistys",
   "tipWorkVolume": "Äänenvoimakkuus",
   "lblWorkCommand": "ffmpeg-komento",
-  "btnWorkCommandCopy": "Kopioi",
   "tipWorkCommandCopy": "Kopioi komento leikepöydälle",
   "msgWorkCommandNone": "Valitse tiedosto nähdäksesi komennon, jonka ffmpeg suorittaa sille",
   "tipWorkFold": "Piilota paneeli kuvan alta",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Koodaa käyttäen",
   "lblStgEncoderSoftware": "Ohjelmisto",
   "lblStgEncoderAuto": "Automaattinen",
-  "msgStgEncoderHint": "Esiasetusten moottori on asetettu tilaan \"Käytä oletuskooderia\". Ohjelmisto tuottaa saman tiedoston jokaisella koneella. Näytönohjain on nopeampi, mutta tekee suurempia tiedostoja samalla laadulla; Automaattinen yrittää ensin NVIDIAa, sitten AMD:tä, sitten Inteliä. Esiasetus, joka vaatii enemmän kuin kortti voi tarjota (10-bittinen, kohdebitrate, x265-parametrit, viritys), koodataan aina ohjelmistolla, samoin kuin kortti, jota tässä koneessa ei ole."
+  "msgStgEncoderHint": "Esiasetusten moottori on asetettu tilaan \"Käytä oletuskooderia\". Ohjelmisto tuottaa saman tiedoston jokaisella koneella. Näytönohjain on nopeampi, mutta tekee suurempia tiedostoja samalla laadulla; Automaattinen yrittää ensin NVIDIAa, sitten AMD:tä, sitten Inteliä. Esiasetus, joka vaatii enemmän kuin kortti voi tarjota (10-bittinen, kohdebitrate, x265-parametrit, viritys), koodataan aina ohjelmistolla, samoin kuin kortti, jota tässä koneessa ei ole.",
+  "btnMainEncode": "Koodaa",
+  "btnWorkCommandCopy": "Kopioi"
 }

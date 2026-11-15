@@ -2,7 +2,11 @@
 //! (left and right in, what comes out), as four tiles to click. The tile in use is lit; a click on it again takes the effect out. It takes the
 //! place of the file list while it is open. The ways and their names are the catalogue's `channels` effect; the pictures are this drawer's.
 
-use crate::{preview_session::WidgetEdit, work_tone::controls_of};
+use crate::{
+    catalog::{ChanTile, UisChanTiles},
+    preview_session::WidgetEdit,
+    work_tone::controls_of,
+};
 use dioxus::prelude::*;
 use engine::{
     effects::{self, Item},
@@ -45,6 +49,8 @@ pub fn ChannelsDrawer(list: Signal<effects::EffectsEntry>, lang: String, on_edit
         _ => String::new(),
     });
 
+    let tiles: Vec<ChanTile> = ways.into_iter().map(|(id, label)| ChanTile { diagram: diagram(&id).map(str::to_owned), id, label }).collect();
+
     rsx! {
         div { class: if mixed { "work-channels work-colour uis-cmp-drawer uis-cmp-panel uis-lvw-scroll wc-mixed" } else { "work-channels work-colour uis-cmp-drawer uis-cmp-panel uis-lvw-scroll" },
             div { class: "wc-head uis-cmp-head",
@@ -53,43 +59,18 @@ pub fn ChannelsDrawer(list: Signal<effects::EffectsEntry>, lang: String, on_edit
                     span { class: "wfx-mixed", "≠" }
                 }
             }
-            div { class: "wch-tiles",
-                for (way , label) in ways {
-                    {
-                        let lit = current.as_deref() == Some(way.as_str());
-                        let picture = diagram(&way);
-                        let way_click = way.clone();
-                        rsx! {
-                            button {
-                                key: "{way}",
-                                r#type: "button",
-                                class: if lit { "wch-tile active" } else { "wch-tile" },
-                                title: "{label}",
-                                "aria-label": "{label}",
-                                "aria-pressed": "{lit}",
-                                onclick: move |_| {
-                                    if lit {
-                                        on_edit.call(WidgetEdit { key: KEY.to_owned(), values: None, keep: true });
-                                    } else {
-                                        let mut v = Item::new(KEY).all_values();
-                                        v.insert("mode".to_owned(), V::Str(way_click.clone()));
-                                        on_edit.call(WidgetEdit { key: KEY.to_owned(), values: Some(v), keep: true });
-                                    }
-                                },
-                                if let Some(d) = picture {
-                                    svg { width: "73", height: "40", view_box: "0 0 110 60",
-                                        text { x: "4", y: "18", "font-size": "11", fill: "currentColor", "L" }
-                                        text { x: "4", y: "50", "font-size": "11", fill: "currentColor", "R" }
-                                        text { x: "98", y: "18", "font-size": "11", fill: "currentColor", "L" }
-                                        text { x: "98", y: "50", "font-size": "11", fill: "currentColor", "R" }
-                                        path { d: "{d}", stroke: "currentColor", "stroke-width": "1.6", fill: "none" }
-                                    }
-                                }
-                                span { class: "wch-label", "{label}" }
-                            }
-                        }
+            UisChanTiles {
+                tiles: tiles,
+                value: current.clone(),
+                on_pick: move |way: String| {
+                    if current.as_deref() == Some(way.as_str()) {
+                        on_edit.call(WidgetEdit { key: KEY.to_owned(), values: None, keep: true });
+                    } else {
+                        let mut v = Item::new(KEY).all_values();
+                        v.insert("mode".to_owned(), V::Str(way));
+                        on_edit.call(WidgetEdit { key: KEY.to_owned(), values: Some(v), keep: true });
                     }
-                }
+                },
             }
         }
     }

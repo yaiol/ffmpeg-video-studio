@@ -32,7 +32,6 @@
   "btnMainClear": "Počisti seznam",
   "btnMainStop": "Ustavi",
   "btnMainApply": "Uporabi",
-  "btnMainConvert": "Pretvori",
   "lblMainPreset": "Prednastavitev",
   "lblMainVideo": "Video",
   "lblFxNone": "Brez",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} datotek pripravljenih za pretvorbo",
   "msgMainSelected": "Izbranih: {n}",
   "tipMainApply": "Uporabi te izbire za izbrane datoteke",
-  "tipMainOpenOutput": "Odpri izhodno mapo",
+  "tipMainShowFile": "Prikaži datoteko v njeni mapi",
+  "tipMainStop": "Ustavi",
+  "tipMainPrevious": "Prejšnja datoteka",
+  "tipMainNext": "Naslednja datoteka",
+  "tipMainPlayerClose": "Zapri predvajalnik",
   "lblMainDestSource": "Izvorna mapa",
   "ttlMainNotify": "Pretvorba končana",
   "tabStgNotifications": "Obvestila",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Vklopi zvok",
   "tipWorkVolume": "Glasnost",
   "lblWorkCommand": "ffmpeg ukaz",
-  "btnWorkCommandCopy": "Kopiraj",
   "tipWorkCommandCopy": "Kopiraj ukaz v odložišče",
   "msgWorkCommandNone": "Izberite datoteko, da si ogledate ukaz, ki ga bo ffmpeg zagnal zanjo",
   "tipWorkFold": "Skrij ploščo pod sliko",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Kodiraj z",
   "lblStgEncoderSoftware": "Programska oprema",
   "lblStgEncoderAuto": "Samodejno",
-  "msgStgEncoderHint": "Motor za prednastavitve je nastavljen na „Uporabi privzeti kodirnik“. Programska oprema ustvari isto datoteko na vsakem računalniku. Grafična kartica je hitrejša, vendar ustvarja večje datoteke enake kakovosti; Samodejno poskusi NVIDIA, nato AMD, nato Intel. Prednastavitev, ki zahteva več, kot lahko kartica ponudi (10-bit, ciljna bitna hitrost, parametri x265, nastavitev), je vedno kodirana programsko, prav tako pa tudi kartica, ki je ta računalnik nima."
+  "msgStgEncoderHint": "Motor za prednastavitve je nastavljen na „Uporabi privzeti kodirnik“. Programska oprema ustvari isto datoteko na vsakem računalniku. Grafična kartica je hitrejša, vendar ustvarja večje datoteke enake kakovosti; Samodejno poskusi NVIDIA, nato AMD, nato Intel. Prednastavitev, ki zahteva več, kot lahko kartica ponudi (10-bit, ciljna bitna hitrost, parametri x265, nastavitev), je vedno kodirana programsko, prav tako pa tudi kartica, ki je ta računalnik nima.",
+  "btnMainEncode": "Kodiraj",
+  "btnWorkCommandCopy": "Kopiraj"
 }

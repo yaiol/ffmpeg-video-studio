@@ -13,6 +13,7 @@ mod icons;
 mod ffmpeg_panel;
 mod manager;
 mod notify;
+mod player;
 mod runner;
 mod settings;
 mod site;
@@ -46,12 +47,13 @@ use dioxus_free_icons::{
     icons::ld_icons::{LdAudioLines, LdBell, LdCircleHelp, LdEraser, LdFileText, LdFolder, LdLayers, LdScaling, LdSettings, LdVideo, LdSparkles, LdTerminal, LdVolume2, LdWrench},
 };
 
-pub(crate) const CSS: [&str; 8] = [
+pub(crate) const CSS: [&str; 9] = [
     include_str!("../assets/uis-colors.css"),
     include_str!("../assets/uis-app.css"),
     include_str!("../assets/uis-bar-window.css"),
     include_str!("../assets/uis-listview.css"),
     include_str!("../assets/uis-fld-labelled.css"),
+    include_str!("../assets/uis-code-box.css"),
     include_str!("../assets/uis-sld.css"),
     include_str!("../assets/app.css"),
     include_str!("../assets/effects_form.css"),

@@ -32,7 +32,6 @@
   "btnMainClear": "Limpiar la lista",
   "btnMainStop": "Detener",
   "btnMainApply": "Aplicar",
-  "btnMainConvert": "Convertir",
   "lblMainPreset": "Preajuste",
   "lblMainVideo": "Vídeo",
   "lblFxNone": "Ninguno",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} archivo(s) listo(s) para la conversión",
   "msgMainSelected": "{n} seleccionados",
   "tipMainApply": "Aplicar estas opciones a los archivos seleccionados",
-  "tipMainOpenOutput": "Abrir la carpeta de salida",
+  "tipMainShowFile": "Mostrar el archivo en su carpeta",
+  "tipMainStop": "Detener",
+  "tipMainPrevious": "Archivo anterior",
+  "tipMainNext": "Archivo siguiente",
+  "tipMainPlayerClose": "Cerrar el reproductor",
   "lblMainDestSource": "Carpeta de origen",
   "ttlMainNotify": "Conversión finalizada",
   "tabStgNotifications": "Notificaciones",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Activar sonido",
   "tipWorkVolume": "Volumen",
   "lblWorkCommand": "Comando ffmpeg",
-  "btnWorkCommandCopy": "Copiar",
   "tipWorkCommandCopy": "Copiar el comando al portapapeles",
   "msgWorkCommandNone": "Selecciona un archivo para ver el comando que ffmpeg ejecutará para él",
   "tipWorkFold": "Ocultar el panel debajo de la imagen",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Codificar con",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Automático",
-  "msgStgEncoderHint": "El motor para los preajustes configurado en \"Usar codificador predeterminado\". El software genera el mismo archivo en cada máquina. Una tarjeta gráfica es más rápida pero crea archivos más grandes con la misma calidad; Automático intenta NVIDIA, luego AMD, luego Intel. Un preajuste que requiere más de lo que una tarjeta puede ofrecer aquí (10 bits, una tasa de bits objetivo, parámetros x265, un ajuste) siempre se codifica por software, al igual que una tarjeta que esta máquina no tiene."
+  "msgStgEncoderHint": "El motor para los preajustes configurado en \"Usar codificador predeterminado\". El software genera el mismo archivo en cada máquina. Una tarjeta gráfica es más rápida pero crea archivos más grandes con la misma calidad; Automático intenta NVIDIA, luego AMD, luego Intel. Un preajuste que requiere más de lo que una tarjeta puede ofrecer aquí (10 bits, una tasa de bits objetivo, parámetros x265, un ajuste) siempre se codifica por software, al igual que una tarjeta que esta máquina no tiene.",
+  "btnMainEncode": "Codificar",
+  "btnWorkCommandCopy": "Copiar"
 }

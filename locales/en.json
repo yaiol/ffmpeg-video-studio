@@ -32,7 +32,6 @@
   "btnMainClear": "Clear the list",
   "btnMainStop": "Stop",
   "btnMainApply": "Apply",
-  "btnMainConvert": "Convert",
   "lblMainPreset": "Preset",
   "lblMainVideo": "Video",
   "lblFxNone": "None",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} file(s) ready for conversion",
   "msgMainSelected": "{n} selected",
   "tipMainApply": "Apply these choices to the selected files",
-  "tipMainOpenOutput": "Open the output folder",
+  "tipMainShowFile": "Show the file in its folder",
+  "tipMainStop": "Stop",
+  "tipMainPrevious": "Previous file",
+  "tipMainNext": "Next file",
+  "tipMainPlayerClose": "Close the player",
   "lblMainDestSource": "Source Folder",
   "ttlMainNotify": "Conversion finished",
   "tabStgNotifications": "Notifications",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Unmute",
   "tipWorkVolume": "Volume",
   "lblWorkCommand": "ffmpeg command",
-  "btnWorkCommandCopy": "Copy",
   "tipWorkCommandCopy": "Copy the command to the clipboard",
   "msgWorkCommandNone": "Select a file to see the command ffmpeg will run for it",
   "tipWorkFold": "Hide the panel under the picture",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Encode with",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Automatic",
-  "msgStgEncoderHint": "The engine for the presets set to \"Use default encoder\". Software gives the same file on every machine. A graphics card is faster but makes larger files at the same quality; Automatic tries NVIDIA, then AMD, then Intel. A preset that needs more than a card gives here (10-bit, a target bitrate, x265 parameters, a tune) is always encoded in software, and so is a card this machine does not have."
+  "msgStgEncoderHint": "The engine for the presets set to \"Use default encoder\". Software gives the same file on every machine. A graphics card is faster but makes larger files at the same quality; Automatic tries NVIDIA, then AMD, then Intel. A preset that needs more than a card gives here (10-bit, a target bitrate, x265 parameters, a tune) is always encoded in software, and so is a card this machine does not have.",
+  "btnMainEncode": "Encode",
+  "btnWorkCommandCopy": "Copy"
 }

@@ -32,7 +32,6 @@
   "btnMainClear": "清空列表",
   "btnMainStop": "停止",
   "btnMainApply": "应用",
-  "btnMainConvert": "转换",
   "lblMainPreset": "预设",
   "lblMainVideo": "视频",
   "lblFxNone": "无",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} 个文件已准备好转换",
   "msgMainSelected": "已选择 {n} 项",
   "tipMainApply": "将这些选择应用于所选文件",
-  "tipMainOpenOutput": "打开输出文件夹",
+  "tipMainShowFile": "在文件夹中显示文件",
+  "tipMainStop": "停止",
+  "tipMainPrevious": "上一个文件",
+  "tipMainNext": "下一个文件",
+  "tipMainPlayerClose": "关闭播放器",
   "lblMainDestSource": "源文件夹",
   "ttlMainNotify": "转换完成",
   "tabStgNotifications": "通知",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "取消静音",
   "tipWorkVolume": "音量",
   "lblWorkCommand": "ffmpeg 命令",
-  "btnWorkCommandCopy": "复制",
   "tipWorkCommandCopy": "将命令复制到剪贴板",
   "msgWorkCommandNone": "选择一个文件以查看 ffmpeg 将为其运行的命令",
   "tipWorkFold": "隐藏图片下方的面板",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "编码方式",
   "lblStgEncoderSoftware": "软件",
   "lblStgEncoderAuto": "自动",
-  "msgStgEncoderHint": "预设的编码器引擎设置为“使用默认编码器”。软件编码在每台机器上生成相同的文件。显卡编码速度更快，但在相同质量下会生成更大的文件；自动模式会尝试NVIDIA，然后是AMD，最后是Intel。需要显卡无法提供的更多功能（10位、目标比特率、x265参数、调优）的预设始终通过软件编码，本机不具备的显卡也如此。"
+  "msgStgEncoderHint": "预设的编码器引擎设置为“使用默认编码器”。软件编码在每台机器上生成相同的文件。显卡编码速度更快，但在相同质量下会生成更大的文件；自动模式会尝试NVIDIA，然后是AMD，最后是Intel。需要显卡无法提供的更多功能（10位、目标比特率、x265参数、调优）的预设始终通过软件编码，本机不具备的显卡也如此。",
+  "btnMainEncode": "编码",
+  "btnWorkCommandCopy": "复制"
 }

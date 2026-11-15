@@ -32,7 +32,6 @@
   "btnMainClear": "Hapus daftar",
   "btnMainStop": "Berhenti",
   "btnMainApply": "Terapkan",
-  "btnMainConvert": "Konversi",
   "lblMainPreset": "Prasetel",
   "lblMainVideo": "Video",
   "lblFxNone": "Tidak ada",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} berkas siap untuk konversi",
   "msgMainSelected": "{n} terpilih",
   "tipMainApply": "Terapkan pilihan ini ke berkas yang dipilih",
-  "tipMainOpenOutput": "Buka folder keluaran",
+  "tipMainShowFile": "Tampilkan berkas di foldernya",
+  "tipMainStop": "Berhenti",
+  "tipMainPrevious": "Berkas sebelumnya",
+  "tipMainNext": "Berkas berikutnya",
+  "tipMainPlayerClose": "Tutup pemutar",
   "lblMainDestSource": "Folder Sumber",
   "ttlMainNotify": "Konversi selesai",
   "tabStgNotifications": "Notifikasi",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Suarakan",
   "tipWorkVolume": "Volume",
   "lblWorkCommand": "Perintah ffmpeg",
-  "btnWorkCommandCopy": "Salin",
   "tipWorkCommandCopy": "Salin perintah ke papan klip",
   "msgWorkCommandNone": "Pilih file untuk melihat perintah yang akan dijalankan ffmpeg untuknya",
   "tipWorkFold": "Sembunyikan panel di bawah gambar",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Encode dengan",
   "lblStgEncoderSoftware": "Perangkat Lunak",
   "lblStgEncoderAuto": "Otomatis",
-  "msgStgEncoderHint": "Mesin untuk preset diatur ke \"Gunakan encoder default\". Perangkat lunak memberikan file yang sama di setiap mesin. Kartu grafis lebih cepat tetapi menghasilkan file yang lebih besar dengan kualitas yang sama; Otomatis mencoba NVIDIA, lalu AMD, lalu Intel. Preset yang membutuhkan lebih dari yang dapat diberikan kartu di sini (10-bit, bitrate target, parameter x265, tune) selalu dienkode dalam perangkat lunak, begitu juga kartu yang tidak dimiliki mesin ini."
+  "msgStgEncoderHint": "Mesin untuk preset diatur ke \"Gunakan encoder default\". Perangkat lunak memberikan file yang sama di setiap mesin. Kartu grafis lebih cepat tetapi menghasilkan file yang lebih besar dengan kualitas yang sama; Otomatis mencoba NVIDIA, lalu AMD, lalu Intel. Preset yang membutuhkan lebih dari yang dapat diberikan kartu di sini (10-bit, bitrate target, parameter x265, tune) selalu dienkode dalam perangkat lunak, begitu juga kartu yang tidak dimiliki mesin ini.",
+  "btnMainEncode": "Enkode",
+  "btnWorkCommandCopy": "Salin"
 }

@@ -185,6 +185,8 @@
   --uis-cmp-label-w: auto;
 }
 
+.uis-cmp-head.between { justify-content: space-between; }
+
 .uis-cmp-head .uis-fld-labelled.compact > .uis-fld-labelled-label {
   flex: 0 0 auto;
 }

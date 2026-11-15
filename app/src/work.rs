@@ -7,7 +7,7 @@
 
 use crate::{
     catalog::{UisAppHeader, UisFldLabelled, LbsDropZone},
-    converter::{Item, NEXT_ID, RunTag, TagKind, overall_percent, percent_text, range_between, run_summary},
+    converter::{Item, NEXT_ID, RowThumb, RunTag, TagKind, overall_percent, percent_text, range_between, run_summary},
     i18n, manager,
     ffmpeg_panel::{FfmpegPopup, Popup, download_note},
     runner::{RUNNER, RunState},
@@ -23,15 +23,16 @@ use crate::{
     work_preview::PreviewPane,
 };
 use crate::work_command::CommandPanel;
+use crate::player::{Player, PlayerPane, Track};
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
-    icons::ld_icons::{LdEraser, LdFilePlus, LdFolder, LdFolderOpen, LdFilm, LdPlay, LdScaling, LdVideo, LdSquare, LdVolume2, LdX},
+    icons::ld_icons::{LdEraser, LdFilePlus, LdFolder, LdFolderSearch, LdPause, LdPlay, LdScaling, LdVideo, LdSquare, LdVolume2, LdX},
 };
 use engine::{effects::EffectsEntry, JobSpec, JobStatus, Overwrite, Trim, download::DownloadState};
 use std::{
     collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::atomic::Ordering,
     time::Duration,
 };
@@ -431,6 +432,7 @@ pub fn Work(
 
     let lang = settings.read().lang.clone();
     let t = |key: &str| i18n::t(&lang, key);
+    let player = Player::new();
 
     let mut add_paths = move |paths: Vec<PathBuf>| {
         // Each file holds its own settings: an added file starts with no effects and no cut, and takes the preset, size, audio,
@@ -593,7 +595,6 @@ pub fn Work(
     dest_options.extend(s.destinations.iter().map(|d| (d.id.clone(), d.name.clone())));
     dest_options.push((engine::destination::PICK_ID.to_owned(), t("lblMainDestPick")));
     let destination_id = s.work.destination_id.clone();
-    let saved_folder = s.destination_by(&s.work.destination_id).folder_path();
     let parallel = s.work.parallel;
     let overwrite = s.work.overwrite;
     drop(s);
@@ -604,7 +605,7 @@ pub fn Work(
 
     let s_main_add_files = t("btnMainAddFiles");
     let s_main_stop = t("btnMainStop");
-    let s_main_convert = t("btnMainConvert");
+    let s_main_encode = t("btnMainEncode");
     let s_main_preset = t("lblMainVideo");
     let s_lbl_preset = s_main_preset.clone();
     let s_lbl_size = t("lblWorkSize");
@@ -634,7 +635,6 @@ pub fn Work(
     let s_main_overwrite_overwrite = t("lblMainOverwriteOverwrite");
     let s_main_overwrite_rename = t("lblMainOverwriteRename");
     let s_main_parallel = t("tipMainParallel");
-    let s_main_open_output = t("tipMainOpenOutput");
     let sel_now = selected.read().clone();
     // The names tags are made of, once per render: a row only looks its choices up.
     let cfg = settings.read().clone();
@@ -682,19 +682,19 @@ pub fn Work(
         None
     };
 
-    // Where "open the output folder" goes: the folder of the newest finished file - which is right
-    // for "beside the source" too - and otherwise the chosen folder.
-    let open_target: Option<PathBuf> = statuses
-        .read()
-        .iter()
-        .filter_map(|(id, s)| match s {
-            JobStatus::Done { output } => Some((*id, output.clone())),
-            _ => None,
-        })
-        .max_by_key(|(id, _)| *id)
-        .and_then(|(_, out)| out.parent().map(Path::to_path_buf))
-        .or_else(|| saved_folder.filter(|p| p.is_absolute()))
-        .filter(|p| p.is_dir());
+    // The converted files in list order: what the player steps through.
+    let queue: Vec<Track> = {
+        let st = statuses.read();
+        items
+            .read()
+            .iter()
+            .filter_map(|i| match st.get(&i.id) {
+                Some(JobStatus::Done { output }) => Some(Track::of(output)),
+                _ => None,
+            })
+            .collect()
+    };
+
 
     rsx! {
         // ⚠ CLAUDE: the header holds the file actions only (icon-only, tooltips). The choices that shape a
@@ -733,7 +733,8 @@ pub fn Work(
         if empty_list {
             div { class: "work-empty", p { class: "wv-failure", "{drop_text}" } }
         }
-        PreviewPane { state: pane_state, pos, channel, visible: active, on_mark: move |mark: Mark| apply_mark(trim_start, trim_end, mark), on_widget: move |edit: WidgetEdit| apply_widget(work_fx, edit), on_texts: move |edit: (String, TextEdit)| apply_texts(work_fx, edit), drawer, folded, pick }
+        PlayerPane { player, queue, lang: lang.clone(), away: !active, fill: true }
+        PreviewPane { state: pane_state, pos, channel, visible: active && !player.is_open(), on_mark: move |mark: Mark| apply_mark(trim_start, trim_end, mark), on_widget: move |edit: WidgetEdit| apply_widget(work_fx, edit), on_texts: move |edit: (String, TextEdit)| apply_texts(work_fx, edit), drawer, folded, pick }
         if drawer() == Drawer::Colour {
             ColourDrawer { list: work_fx, lang: lang.clone(), pick, on_edit: move |edit: WidgetEdit| apply_widget(work_fx, edit), mixed: mixed_now.differing.contains("colour") || mixed_now.partial.contains("colour") }
         } else if drawer() == Drawer::Tone {
@@ -776,6 +777,13 @@ pub fn Work(
                         Some(JobStatus::Cancelled) => (t("msgMainStatusCancelled"), String::new(), "idle"),
                         Some(JobStatus::Failed { reason }) => (t("msgMainStatusFailed"), reason.clone(), "err"),
                     };
+                    // A finished row shows two buttons in the place of its badge: play the file in the player, show it in its folder.
+                    let done_file = match &status {
+                        Some(JobStatus::Done { output }) => Some(output.clone()),
+                        _ => None,
+                    };
+                    let sounding = done_file.as_ref().is_some_and(|f| player.is_sounding(f));
+                    let (s_play, s_show) = (if sounding { t("tipWorkPause") } else { t("tipWorkPlay") }, t("tipMainShowFile"));
                     let id = item.id;
                     let path = item.path.display().to_string();
                     let tip = if active { t("tipMainCancel") } else { t("tipMainRemove") };
@@ -837,7 +845,7 @@ pub fn Work(
                                 }
                             },
                             div { class: "uis-lvw-item-icon converter-cover-box",
-                                Icon { width: 18, height: 18, icon: LdFilm }
+                                RowThumb { path: item.path.clone() }
                             }
                             div { class: "uis-lvw-item-body",
                                 div { class: "uis-lvw-item-name", "{item.name}" }
@@ -848,7 +856,35 @@ pub fn Work(
                                     }
                                 }
                             }
-                            if !badge.is_empty() {
+                            if let Some(file) = done_file {
+                                button {
+                                    class: "uis-btn ico subtle",
+                                    title: "{s_play}",
+                                    "aria-label": "{s_play}",
+                                    onclick: {
+                                        let track = Track::of(&file);
+                                        move |e: MouseEvent| {
+                                            e.stop_propagation();
+                                            player.play(track.clone());
+                                        }
+                                    },
+                                    if sounding {
+                                        Icon { width: 14, height: 14, icon: LdPause }
+                                    } else {
+                                        Icon { width: 14, height: 14, icon: LdPlay }
+                                    }
+                                }
+                                button {
+                                    class: "uis-btn ico subtle",
+                                    title: "{s_show}",
+                                    "aria-label": "{s_show}",
+                                    onclick: move |e: MouseEvent| {
+                                        e.stop_propagation();
+                                        crate::converter::show_in_folder(&file);
+                                    },
+                                    Icon { width: 14, height: 14, icon: LdFolderSearch }
+                                }
+                            } else if !badge.is_empty() {
                                 span { class: "uis-lvw-item-badge converter-state converter-state-{state}", title: "{detail}", "{badge}" }
                             }
                             button {
@@ -1098,25 +1134,11 @@ pub fn Work(
                         }
                     }
                     button {
-                        class: "uis-btn ico",
-                        title: "{s_main_convert}",
-                        "aria-label": "{s_main_convert}",
+                        class: "uis-btn primary",
                         disabled: ffmpeg_missing || !have_items || busy || trim_invalid,
                         onclick: convert,
-                        Icon { width: 14, height: 14, icon: LdPlay }
+                        "{s_main_encode}"
                     }
-                }
-                button {
-                    class: "uis-btn ico",
-                    title: "{s_main_open_output}",
-                    "aria-label": "{s_main_open_output}",
-                    disabled: open_target.is_none(),
-                    onclick: move |_| {
-                        if let Some(p) = &open_target {
-                            let _ = open::that(p);
-                        }
-                    },
-                    Icon { width: 14, height: 14, icon: LdFolderOpen }
                 }
             }
         }

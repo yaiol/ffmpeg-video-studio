@@ -32,7 +32,6 @@
   "btnMainClear": "נקה את הרשימה",
   "btnMainStop": "עצור",
   "btnMainApply": "החל",
-  "btnMainConvert": "המר",
   "lblMainPreset": "קביעה מראש",
   "lblMainVideo": "וידאו",
   "lblFxNone": "ללא",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} קבצים מוכנים להמרה",
   "msgMainSelected": "{n} נבחרו",
   "tipMainApply": "החל אפשרויות אלה על הקבצים הנבחרים",
-  "tipMainOpenOutput": "פתח את תיקיית הפלט",
+  "tipMainShowFile": "הצג את הקובץ בתיקייה שלו",
+  "tipMainStop": "עצור",
+  "tipMainPrevious": "קובץ קודם",
+  "tipMainNext": "קובץ הבא",
+  "tipMainPlayerClose": "סגור את הנגן",
   "lblMainDestSource": "תיקיית מקור",
   "ttlMainNotify": "ההמרה הסתיימה",
   "tabStgNotifications": "התראות",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "בטל השתקה",
   "tipWorkVolume": "עוצמת קול",
   "lblWorkCommand": "פקודת ffmpeg",
-  "btnWorkCommandCopy": "העתק",
   "tipWorkCommandCopy": "העתק את הפקודה ללוח",
   "msgWorkCommandNone": "בחר קובץ כדי לראות את הפקודה ש-ffmpeg יריץ עבורו",
   "tipWorkFold": "הסתר את החלונית מתחת לתמונה",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "קודד באמצעות",
   "lblStgEncoderSoftware": "תוכנה",
   "lblStgEncoderAuto": "אוטומטי",
-  "msgStgEncoderHint": "המנוע עבור ההגדרות הקבועות מראש מוגדר ל\"השתמש במקודד ברירת מחדל\". תוכנה נותנת את אותו קובץ בכל מכונה. כרטיס גרפי מהיר יותר אך יוצר קבצים גדולים יותר באותה איכות; אוטומטי מנסה NVIDIA, ואז AMD, ואז Intel. הגדרה קבועה מראש הדורשת יותר ממה שכרטיס יכול לספק כאן (10-ביט, קצב סיביות יעד, פרמטרים של x265, כוונון) תמיד מקודדת בתוכנה, וכך גם כרטיס שאינו קיים במכונה זו."
+  "msgStgEncoderHint": "המנוע עבור ההגדרות הקבועות מראש מוגדר ל\"השתמש במקודד ברירת מחדל\". תוכנה נותנת את אותו קובץ בכל מכונה. כרטיס גרפי מהיר יותר אך יוצר קבצים גדולים יותר באותה איכות; אוטומטי מנסה NVIDIA, ואז AMD, ואז Intel. הגדרה קבועה מראש הדורשת יותר ממה שכרטיס יכול לספק כאן (10-ביט, קצב סיביות יעד, פרמטרים של x265, כוונון) תמיד מקודדת בתוכנה, וכך גם כרטיס שאינו קיים במכונה זו.",
+  "btnMainEncode": "קודד",
+  "btnWorkCommandCopy": "העתק"
 }

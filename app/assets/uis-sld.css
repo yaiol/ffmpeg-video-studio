@@ -21,3 +21,15 @@
 .uis-cmp-panel .uis-sld {
   zoom: 0.875;
 }
+
+/* .uis-sld-timeline - the position in a file: a thick grey line and a red mark for the moment, as wide as its place.
+   Use: <input type="range" class="uis-sld-timeline"> (NOT with .uis-sld: it is drawn here, not by the system, so it has
+   one size and the compact panel does not shrink it). The part of the file that is kept shows in the accent colour:
+   set --in and --out (percent) on the input; without them the whole line is grey. */
+.uis-sld-timeline { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; margin: 0; background: transparent; cursor: pointer; }
+.uis-sld-timeline:disabled { opacity: 0.4; cursor: default; }
+.uis-sld-timeline::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 4px;
+  background: linear-gradient(to right, color-mix(in srgb, var(--uis-text-mute) 35%, transparent) var(--in, 0%), var(--uis-accent) var(--in, 0%), var(--uis-accent) var(--out, 0%), color-mix(in srgb, var(--uis-text-mute) 35%, transparent) var(--out, 0%));
+}
+.uis-sld-timeline::-webkit-slider-thumb { -webkit-appearance: none; width: 4px; height: 18px; margin-top: -5px; border-radius: 2px; background: var(--uis-danger); }

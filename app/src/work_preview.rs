@@ -15,7 +15,7 @@
 //! a string literal at the call site.
 
 use crate::{
-    catalog::{UisCropRotate, UisFldLabelled, UisNum},
+    catalog::{UisCropRotate, UisFldLabelled, UisNum, UisWaveBars},
     effects_editor::SYSTEM,
     i18n,
     preview_session::{Drawer, Mark, State, TextEdit, WidgetEdit},
@@ -26,9 +26,10 @@ use crate::{
     work_text::{self, Drag as TextDrag, TextBar},
 };
 use dioxus::prelude::*;
+use crate::icons::{self, FileIcon};
 use dioxus_free_icons::{
     Icon,
-    icons::ld_icons::{LdChevronLeft, LdChevronRight, LdChevronsDown, LdChevronsUp, LdCrop, LdFlipHorizontal, LdFlipVertical, LdGauge, LdImage, LdList, LdPalette, LdSpline, LdSlidersVertical, LdActivity, LdArrowLeftRight, LdPause, LdPlay, LdRotateCcw, LdType, LdVolume2, LdVolumeX, LdX},
+    icons::ld_icons::{LdChevronLeft, LdChevronRight, LdChevronsDown, LdChevronsUp, LdCrop, LdFlipHorizontal, LdFlipVertical, LdGauge, LdImage, LdList, LdPalette, LdSpline, LdSlidersVertical, LdActivity, LdArrowLeftRight, LdPause, LdPlay, LdSquare, LdRotateCcw, LdType, LdVolume2, LdVolumeX, LdX},
 };
 use engine::{
     effects::{self, EffectsEntry, Look},
@@ -99,16 +100,6 @@ fn FilmRow(film: Signal<Vec<Option<String>>>) -> Element {
                     span { key: "{i}", class: "wv-film-pic" }
                 }
             }
-        }
-    }
-}
-
-/// The bars of the sound band, a piece of its own for the same reason.
-#[component]
-fn WaveBars(wave: Signal<Vec<f32>>) -> Element {
-    rsx! {
-        for (i, p) in wave().into_iter().enumerate() {
-            span { key: "{i}", style: "height: {(p * 100.0).max(2.0):.0}%" }
         }
     }
 }
@@ -382,7 +373,7 @@ fn capture(stage_id: &str, pointer: i32) {
 const FILM_SLOTS: usize = 24;
 const FILM_HEIGHT: u32 = 90;
 /// How many bars the sound band under the pictures is drawn with.
-const WAVE_BARS: usize = 240;
+const WAVE_BARS: usize = 900;
 
 #[component]
 pub fn PreviewPane(state: Signal<State>, mut pos: Signal<f64>, channel: Signal<Arc<Channel>>, visible: bool, on_mark: EventHandler<Mark>, on_widget: EventHandler<WidgetEdit>, on_texts: EventHandler<(String, TextEdit)>, mut drawer: Signal<Drawer>, mut folded: Signal<bool>, mut pick: Signal<Option<Pick>>) -> Element {
@@ -699,6 +690,7 @@ pub fn PreviewPane(state: Signal<State>, mut pos: Signal<f64>, channel: Signal<A
     let s_back = t("tipWorkBack");
     let s_forward = t("tipWorkForward");
     let s_play = if playing() { t("tipWorkPause") } else { t("tipWorkPlay") };
+    let s_stop = t("tipMainStop");
     let s_clear = t("tipWorkClearCut");
     let s_mute = if muted() { t("tipWorkUnmute") } else { t("tipWorkMute") };
     let s_volume = t("tipWorkVolume");
@@ -1257,7 +1249,7 @@ pub fn PreviewPane(state: Signal<State>, mut pos: Signal<f64>, channel: Signal<A
                 }
                 if !wave().is_empty() {
                     div { class: "wv-wave", style: "{region}",
-                        WaveBars { wave }
+                        UisWaveBars { peaks: wave() }
                         div { class: "wv-film-dim" }
                     if let (true, Some(w), Some(words)) = (ready, fade_sound_w.clone(), fade_sound_words.clone()) {
                         FadeLane { w, values: fade_sound_values.clone(), held: fade_sound_held, shown: fade_sound_shown, kept, length, words, strip: strip_sound, drag: fade_drag_sound, live: live_fade_sound, on_widget }
@@ -1266,12 +1258,12 @@ pub fn PreviewPane(state: Signal<State>, mut pos: Signal<f64>, channel: Signal<A
                 }
                 div { class: "wv-bar",
                     button {
-                        class: "uis-btn",
+                        class: "uis-btn ico",
                         title: "{s_set_in}",
                         "aria-label": "{s_set_in}",
                         disabled: !ready,
                         onclick: move |_| on_mark.call(Mark::Start(preview::clock(*pos.peek()))),
-                        "["
+                        FileIcon { svg: icons::CUT_START }
                     }
                     button {
                         class: "uis-btn ico",
@@ -1285,7 +1277,7 @@ pub fn PreviewPane(state: Signal<State>, mut pos: Signal<f64>, channel: Signal<A
                                 start_stream(at);
                             }
                         },
-                        "|<"
+                        FileIcon { svg: icons::GOTO_START }
                     }
                     button {
                         class: "uis-btn ico",
@@ -1325,6 +1317,18 @@ pub fn PreviewPane(state: Signal<State>, mut pos: Signal<f64>, channel: Signal<A
                     }
                     button {
                         class: "uis-btn ico",
+                        title: "{s_stop}",
+                        "aria-label": "{s_stop}",
+                        disabled: !ready,
+                        // Stop goes back to where play starts: the start of the cut, the start of the file without one.
+                        onclick: move |_| {
+                            stop_stream();
+                            pos.set(written(&state.peek().cut_start).unwrap_or(0.0));
+                        },
+                        Icon { width: 14, height: 14, icon: LdSquare }
+                    }
+                    button {
+                        class: "uis-btn ico",
                         title: "{s_forward}",
                         "aria-label": "{s_forward}",
                         disabled: !ready,
@@ -1344,23 +1348,23 @@ pub fn PreviewPane(state: Signal<State>, mut pos: Signal<f64>, channel: Signal<A
                             stop_stream();
                             pos.set(written(&state.peek().cut_end).unwrap_or(length));
                         },
-                        ">|"
+                        FileIcon { svg: icons::GOTO_END }
                     }
                     button {
-                        class: "uis-btn",
+                        class: "uis-btn ico",
                         title: "{s_set_out}",
                         "aria-label": "{s_set_out}",
                         disabled: !ready,
                         onclick: move |_| on_mark.call(Mark::End(preview::clock(*pos.peek()))),
-                        "]"
+                        FileIcon { svg: icons::CUT_END }
                     }
                     button {
-                        class: "uis-btn ico subtle",
+                        class: "uis-btn ico",
                         title: "{s_clear}",
                         "aria-label": "{s_clear}",
                         disabled: cut_in.is_none() && cut_out.is_none(),
                         onclick: move |_| on_mark.call(Mark::Clear),
-                        Icon { width: 14, height: 14, icon: LdX }
+                        FileIcon { svg: icons::CUT_RESET }
                     }
                     button {
                         class: "uis-btn ico subtle",

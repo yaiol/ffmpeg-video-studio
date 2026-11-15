@@ -1,0 +1,14 @@
+/* uis-ctl-chan-tiles.css — a row of diagram tiles to click (lib/uis-ctl-chan-tiles.jsx)
+   ═══════════════════════════════════════════════════════════════════════════
+   An OPTIONAL control's skin, so it is its own file: the sync copies a catalog
+   CSS into an app only when that app uses it.
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.uis-cht { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding-top: 6px; }
+.uis-cht-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 10px; border: 1px solid var(--uis-border); border-radius: 8px; background: transparent; color: var(--uis-text-dim); cursor: pointer; font: inherit; }
+.uis-cht-tile:hover { color: var(--uis-text); }
+.uis-cht-tile.active { color: var(--uis-accent); border-color: var(--uis-accent); background: color-mix(in srgb, var(--uis-accent) 12%, transparent); }
+.uis-cht-label { font-size: 11px; max-width: 150px; line-height: 1.2; text-align: center; }

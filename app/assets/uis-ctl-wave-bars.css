@@ -1,0 +1,12 @@
+/* uis-ctl-wave-bars.css — the bars of a sound (lib/uis-ctl-wave-bars.jsx)
+   ═══════════════════════════════════════════════════════════════════════════
+   An OPTIONAL control's skin, so it is its own file: the sync copies a catalog
+   CSS into an app only when that app uses it.
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The bars fill the box they are put in (the box is the app's or the Waveform control's: it must be `position: relative`). */
+.uis-wvb { position: absolute; inset: 0; color: var(--uis-accent); }
+.uis-wvb-svg { display: block; width: 100%; height: 100%; }

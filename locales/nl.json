@@ -32,7 +32,6 @@
   "btnMainClear": "Lijst wissen",
   "btnMainStop": "Stoppen",
   "btnMainApply": "Toepassen",
-  "btnMainConvert": "Converteren",
   "lblMainPreset": "Voorinstelling",
   "lblMainVideo": "Video",
   "lblFxNone": "Geen",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} bestand(en) klaar voor conversie",
   "msgMainSelected": "{n} geselecteerd",
   "tipMainApply": "Pas deze keuzes toe op de geselecteerde bestanden",
-  "tipMainOpenOutput": "Uitvoermap openen",
+  "tipMainShowFile": "Toon het bestand in de map",
+  "tipMainStop": "Stoppen",
+  "tipMainPrevious": "Vorig bestand",
+  "tipMainNext": "Volgend bestand",
+  "tipMainPlayerClose": "Speler sluiten",
   "lblMainDestSource": "Bronmap",
   "ttlMainNotify": "Conversie voltooid",
   "tabStgNotifications": "Meldingen",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Geluid aan",
   "tipWorkVolume": "Volume",
   "lblWorkCommand": "ffmpeg-commando",
-  "btnWorkCommandCopy": "Kopiëren",
   "tipWorkCommandCopy": "Kopieer het commando naar het klembord",
   "msgWorkCommandNone": "Selecteer een bestand om het commando te zien dat ffmpeg ervoor zal uitvoeren",
   "tipWorkFold": "Paneel onder de afbeelding verbergen",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Coderen met",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Automatisch",
-  "msgStgEncoderHint": "De engine voor de voorinstellingen is ingesteld op \"Standaard-encoder gebruiken\". Software levert hetzelfde bestand op elke machine. Een grafische kaart is sneller, maar maakt grotere bestanden van dezelfde kwaliteit; Automatisch probeert NVIDIA, dan AMD, dan Intel. Een voorinstelling die meer vereist dan een kaart hier kan bieden (10-bit, een doelbitrate, x265-parameters, een tune) wordt altijd in software gecodeerd, evenals een kaart die deze machine niet heeft."
+  "msgStgEncoderHint": "De engine voor de voorinstellingen is ingesteld op \"Standaard-encoder gebruiken\". Software levert hetzelfde bestand op elke machine. Een grafische kaart is sneller, maar maakt grotere bestanden van dezelfde kwaliteit; Automatisch probeert NVIDIA, dan AMD, dan Intel. Een voorinstelling die meer vereist dan een kaart hier kan bieden (10-bit, een doelbitrate, x265-parameters, een tune) wordt altijd in software gecodeerd, evenals een kaart die deze machine niet heeft.",
+  "btnMainEncode": "Coderen",
+  "btnWorkCommandCopy": "Kopiëren"
 }

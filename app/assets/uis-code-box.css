@@ -1,0 +1,11 @@
+/* uis-code-box.css — a read-only box of monospace text that can be selected (a command, a path)
+   ═══════════════════════════════════════════════════════════════════════════
+   Pure CSS, an OPTIONAL file (the app lists it in its CSS array). One class: .uis-code-box
+  . It is a piece, not a bundle: the title and
+   the button around it are the caller's (.uis-cmp-head, UisBtnCopy).
+
+   ⚠ Do not edit an app's copy — this file is distributed by sync-shared.js;
+   edit the canonical source and re-sync.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.uis-code-box { max-height: calc(3 * 1.4em + 8px); overflow-y: auto; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 11px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; user-select: text; padding: 4px 6px; border-radius: 6px; background: rgba(127, 127, 127, 0.12); }

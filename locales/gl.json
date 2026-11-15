@@ -32,7 +32,6 @@
   "btnMainClear": "Limpar a lista",
   "btnMainStop": "Deter",
   "btnMainApply": "Aplicar",
-  "btnMainConvert": "Converter",
   "lblMainPreset": "Predefinido",
   "lblMainVideo": "Vídeo",
   "lblFxNone": "Ningún",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} ficheiro(s) listo(s) para a conversión",
   "msgMainSelected": "{n} seleccionados",
   "tipMainApply": "Aplicar estas opcións aos ficheiros seleccionados",
-  "tipMainOpenOutput": "Abrir o cartafol de saída",
+  "tipMainShowFile": "Mostrar o ficheiro no seu cartafol",
+  "tipMainStop": "Deter",
+  "tipMainPrevious": "Ficheiro anterior",
+  "tipMainNext": "Ficheiro seguinte",
+  "tipMainPlayerClose": "Pechar o reprodutor",
   "lblMainDestSource": "Cartafol de orixe",
   "ttlMainNotify": "Conversión rematada",
   "tabStgNotifications": "Notificacións",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Activar son",
   "tipWorkVolume": "Volume",
   "lblWorkCommand": "Comando ffmpeg",
-  "btnWorkCommandCopy": "Copiar",
   "tipWorkCommandCopy": "Copiar o comando ao portapapeis",
   "msgWorkCommandNone": "Seleccione un ficheiro para ver o comando que ffmpeg executará para el",
   "tipWorkFold": "Agochar o panel debaixo da imaxe",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Codificar con",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Automático",
-  "msgStgEncoderHint": "O motor para os preaxustes configurado en \"Usar codificador predeterminado\". O software xera o mesmo ficheiro en cada máquina. Unha tarxeta gráfica é máis rápida pero crea ficheiros máis grandes coa mesma calidade; Automático tenta NVIDIA, despois AMD, despois Intel. Un preaxuste que require máis do que unha tarxeta pode ofrecer aquí (10 bits, unha taxa de bits obxectivo, parámetros x265, un axuste) sempre se codifica por software, así como unha tarxeta que esta máquina non ten."
+  "msgStgEncoderHint": "O motor para os preaxustes configurado en \"Usar codificador predeterminado\". O software xera o mesmo ficheiro en cada máquina. Unha tarxeta gráfica é máis rápida pero crea ficheiros máis grandes coa mesma calidade; Automático tenta NVIDIA, despois AMD, despois Intel. Un preaxuste que require máis do que unha tarxeta pode ofrecer aquí (10 bits, unha taxa de bits obxectivo, parámetros x265, un axuste) sempre se codifica por software, así como unha tarxeta que esta máquina non ten.",
+  "btnMainEncode": "Codificar",
+  "btnWorkCommandCopy": "Copiar"
 }

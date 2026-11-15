@@ -32,7 +32,6 @@
   "btnMainClear": "Kosongkan senarai",
   "btnMainStop": "Henti",
   "btnMainApply": "Guna",
-  "btnMainConvert": "Tukar",
   "lblMainPreset": "Pratetap",
   "lblMainVideo": "Video",
   "lblFxNone": "Tiada",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} fail sedia untuk penukaran",
   "msgMainSelected": "{n} dipilih",
   "tipMainApply": "Guna pilihan ini pada fail yang dipilih",
-  "tipMainOpenOutput": "Buka folder output",
+  "tipMainShowFile": "Tunjukkan fail dalam foldernya",
+  "tipMainStop": "Henti",
+  "tipMainPrevious": "Fail sebelumnya",
+  "tipMainNext": "Fail seterusnya",
+  "tipMainPlayerClose": "Tutup pemain",
   "lblMainDestSource": "Folder Sumber",
   "ttlMainNotify": "Penukaran selesai",
   "tabStgNotifications": "Pemberitahuan",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Nyahsenyap",
   "tipWorkVolume": "Kelantangan",
   "lblWorkCommand": "Perintah ffmpeg",
-  "btnWorkCommandCopy": "Salin",
   "tipWorkCommandCopy": "Salin perintah ke papan keratan",
   "msgWorkCommandNone": "Pilih fail untuk melihat perintah yang akan dijalankan ffmpeg untuknya",
   "tipWorkFold": "Sembunyikan panel di bawah gambar",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Pengekodan dengan",
   "lblStgEncoderSoftware": "Perisian",
   "lblStgEncoderAuto": "Automatik",
-  "msgStgEncoderHint": "Enjin untuk pratetap ditetapkan kepada \"Gunakan pengekod lalai\". Perisian memberikan fail yang sama pada setiap mesin. Kad grafik lebih pantas tetapi menghasilkan fail yang lebih besar pada kualiti yang sama; Automatik mencuba NVIDIA, kemudian AMD, kemudian Intel. Pratetap yang memerlukan lebih daripada yang boleh diberikan oleh kad di sini (10-bit, kadar bit sasaran, parameter x265, talaan) sentiasa dikodkan dalam perisian, begitu juga kad yang tidak dimiliki oleh mesin ini."
+  "msgStgEncoderHint": "Enjin untuk pratetap ditetapkan kepada \"Gunakan pengekod lalai\". Perisian memberikan fail yang sama pada setiap mesin. Kad grafik lebih pantas tetapi menghasilkan fail yang lebih besar pada kualiti yang sama; Automatik mencuba NVIDIA, kemudian AMD, kemudian Intel. Pratetap yang memerlukan lebih daripada yang boleh diberikan oleh kad di sini (10-bit, kadar bit sasaran, parameter x265, talaan) sentiasa dikodkan dalam perisian, begitu juga kad yang tidak dimiliki oleh mesin ini.",
+  "btnMainEncode": "Enkod",
+  "btnWorkCommandCopy": "Salin"
 }

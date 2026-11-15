@@ -1,6 +1,6 @@
 [package]
 name = "ffmpeg-video-studio"
-version = "2.0.2"
+version = "2.0.3"
 edition = "2024"
 description = "A Studio to cut and grade one video and see each effect, and a Batch to convert many files at once. ffmpeg is the engine."
 

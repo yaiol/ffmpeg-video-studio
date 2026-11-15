@@ -32,7 +32,6 @@
   "btnMainClear": "Limpar a lista",
   "btnMainStop": "Parar",
   "btnMainApply": "Aplicar",
-  "btnMainConvert": "Converter",
   "lblMainPreset": "Predefinição",
   "lblMainVideo": "Vídeo",
   "lblFxNone": "Nenhum",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} ficheiro(s) pronto(s) para conversão",
   "msgMainSelected": "{n} selecionados",
   "tipMainApply": "Aplicar estas opções aos ficheiros selecionados",
-  "tipMainOpenOutput": "Abrir a pasta de saída",
+  "tipMainShowFile": "Mostrar o ficheiro na sua pasta",
+  "tipMainStop": "Parar",
+  "tipMainPrevious": "Ficheiro anterior",
+  "tipMainNext": "Ficheiro seguinte",
+  "tipMainPlayerClose": "Fechar o leitor",
   "lblMainDestSource": "Pasta de Origem",
   "ttlMainNotify": "Conversão concluída",
   "tabStgNotifications": "Notificações",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Ativar som",
   "tipWorkVolume": "Volume",
   "lblWorkCommand": "Comando ffmpeg",
-  "btnWorkCommandCopy": "Copiar",
   "tipWorkCommandCopy": "Copiar o comando para a área de transferência",
   "msgWorkCommandNone": "Selecione um ficheiro para ver o comando que o ffmpeg irá executar para ele",
   "tipWorkFold": "Ocultar painel sob a imagem",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Codificar com",
   "lblStgEncoderSoftware": "Software",
   "lblStgEncoderAuto": "Automático",
-  "msgStgEncoderHint": "O motor para as predefinições está definido para \"Usar codificador predefinido\". O software gera o mesmo ficheiro em todas as máquinas. Uma placa gráfica é mais rápida, mas cria ficheiros maiores com a mesma qualidade; o modo Automático tenta NVIDIA, depois AMD, depois Intel. Uma predefinição que exige mais do que uma placa pode oferecer aqui (10 bits, uma taxa de bits alvo, parâmetros x265, um ajuste) é sempre codificada por software, assim como uma placa que esta máquina não possui."
+  "msgStgEncoderHint": "O motor para as predefinições está definido para \"Usar codificador predefinido\". O software gera o mesmo ficheiro em todas as máquinas. Uma placa gráfica é mais rápida, mas cria ficheiros maiores com a mesma qualidade; o modo Automático tenta NVIDIA, depois AMD, depois Intel. Uma predefinição que exige mais do que uma placa pode oferecer aqui (10 bits, uma taxa de bits alvo, parâmetros x265, um ajuste) é sempre codificada por software, assim como uma placa que esta máquina não possui.",
+  "btnMainEncode": "Codificar",
+  "btnWorkCommandCopy": "Copiar"
 }

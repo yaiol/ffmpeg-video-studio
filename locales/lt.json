@@ -32,7 +32,6 @@
   "btnMainClear": "Išvalyti sąrašą",
   "btnMainStop": "Stabdyti",
   "btnMainApply": "Taikyti",
-  "btnMainConvert": "Konvertuoti",
   "lblMainPreset": "Nustatymas",
   "lblMainVideo": "Vaizdo įrašas",
   "lblFxNone": "Nėra",
@@ -78,7 +77,11 @@
   "msgMainReady": "{n} failų paruošta konvertavimui",
   "msgMainSelected": "Pasirinkta: {n}",
   "tipMainApply": "Taikyti šiuos pasirinkimus pasirinktiems failams",
-  "tipMainOpenOutput": "Atidaryti išvesties aplanką",
+  "tipMainShowFile": "Rodyti failą jo aplanke",
+  "tipMainStop": "Stabdyti",
+  "tipMainPrevious": "Ankstesnis failas",
+  "tipMainNext": "Kitas failas",
+  "tipMainPlayerClose": "Uždaryti grotuvą",
   "lblMainDestSource": "Šaltinio aplankas",
   "ttlMainNotify": "Konvertavimas baigtas",
   "tabStgNotifications": "Pranešimai",
@@ -233,7 +236,6 @@
   "tipWorkUnmute": "Įjungti garsą",
   "tipWorkVolume": "Garsumas",
   "lblWorkCommand": "ffmpeg komanda",
-  "btnWorkCommandCopy": "Kopijuoti",
   "tipWorkCommandCopy": "Nukopijuoti komandą į iškarpinę",
   "msgWorkCommandNone": "Pasirinkite failą, kad pamatytumėte komandą, kurią ffmpeg jam paleis",
   "tipWorkFold": "Slėpti skydelį po paveikslėliu",
@@ -255,5 +257,7 @@
   "lblStgEncoder": "Koduoti su",
   "lblStgEncoderSoftware": "Programinė įranga",
   "lblStgEncoderAuto": "Automatinis",
-  "msgStgEncoderHint": "Išankstinių nustatymų variklis nustatytas į „Naudoti numatytąjį koduotuvą“. Programinė įranga sukuria tą patį failą kiekviename kompiuteryje. Grafikos plokštė yra greitesnė, bet sukuria didesnius failus su ta pačia kokybe; Automatinis bando NVIDIA, tada AMD, tada Intel. Išankstinis nustatymas, kuriam reikia daugiau nei plokštė gali suteikti (10 bitų, tikslinis bitratas, x265 parametrai, derinimas), visada koduojamas programine įranga, taip pat ir plokštė, kurios šiame kompiuteryje nėra."
+  "msgStgEncoderHint": "Išankstinių nustatymų variklis nustatytas į „Naudoti numatytąjį koduotuvą“. Programinė įranga sukuria tą patį failą kiekviename kompiuteryje. Grafikos plokštė yra greitesnė, bet sukuria didesnius failus su ta pačia kokybe; Automatinis bando NVIDIA, tada AMD, tada Intel. Išankstinis nustatymas, kuriam reikia daugiau nei plokštė gali suteikti (10 bitų, tikslinis bitratas, x265 parametrai, derinimas), visada koduojamas programine įranga, taip pat ir plokštė, kurios šiame kompiuteryje nėra.",
+  "btnMainEncode": "Koduoti",
+  "btnWorkCommandCopy": "Kopijuoti"
 }
