@@ -79,7 +79,7 @@ jobs:
           restore-keys: |
             rust-${{ runner.os }}-dx${{ steps.dx.outputs.version }}-
 
-      # ⚠ CLAUDE: PREBUILT first. A cache cannot carry dx from one release to the next: this workflow
+      # ⚠ PREBUILT first. A cache cannot carry dx from one release to the next: this workflow
       # runs on tags only, and GitHub scopes a cache to the ref that made it, so the v1.0.1 run cannot
       # see what v1.0.0 saved and nothing ever runs on the default branch to share one. dioxus-cli
       # declares prebuilt binaries for cargo-binstall (package.metadata.binstall), which needs no
@@ -89,7 +89,7 @@ jobs:
         with:
           tool: cargo-binstall
 
-      # ⚠ CLAUDE: only a dx built for THIS machine counts, and it must actually start. On an Apple
+      # ⚠ only a dx built for THIS machine counts, and it must actually start. On an Apple
       # Silicon runner binstall falls back to the Intel build when the lookup of the native one times
       # out; that build starts under Rosetta and dies at once on a missing Intel libssl (`Library not
       # loaded: /usr/local/opt/openssl@3`). So: the native target only, tried twice (the lookup
