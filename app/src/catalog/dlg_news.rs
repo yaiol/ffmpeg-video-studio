@@ -1,4 +1,4 @@
-// twin: uis-dlg-news.jsx jsx@156a224fadaf rsx@e92315f67e0e
+// twin: uis-dlg-news.jsx jsx@156a224fadaf rsx@613f2a4ca545
 //! UisDlgNews — twin of `uis-dlg-news.jsx`: the ONE pop-up that shows yaiol news, in every app that
 //! shows news. Controlled and fetch-free:
 //!
@@ -217,7 +217,6 @@ pub fn UisDlgNews(
                 },
                 button {
                     class: "uis-dl-close",
-                    r#type: "button",
                     title: "{dismiss_tip}",
                     "aria-label": "{dismiss_tip}",
                     onclick: move |_| on_close.call(hide_ids()),
@@ -265,7 +264,6 @@ pub fn UisDlgNews(
                 if count > 1 {
                     div { class: "uis-dlp-nav",
                         button {
-                            r#type: "button",
                             class: "uis-btn ico subtle",
                             onclick: move |_| choose(current as isize - 1),
                             Icon { width: 16, height: 16, icon: LdChevronLeft }
@@ -273,14 +271,12 @@ pub fn UisDlgNews(
                         for (i, it) in list.iter().enumerate() {
                             button {
                                 key: "{it.id}",
-                                r#type: "button",
                                 class: if i == current { "uis-chp on" } else { "uis-chp" },
                                 onclick: move |_| choose(i as isize),
                                 "{i + 1}"
                             }
                         }
                         button {
-                            r#type: "button",
                             class: "uis-btn ico subtle",
                             onclick: move |_| choose(current as isize + 1),
                             Icon { width: 16, height: 16, icon: LdChevronRight }
@@ -299,7 +295,6 @@ pub fn UisDlgNews(
                     }
                     if let Some(url) = link_for_click {
                         button {
-                            r#type: "button",
                             class: "uis-btn primary",
                             autofocus: true,
                             onclick: move |_| {
@@ -309,7 +304,6 @@ pub fn UisDlgNews(
                         }
                     }
                     button {
-                        r#type: "button",
                         class: "uis-btn subtle",
                         autofocus: link.is_none(),
                         onclick: move |_| on_close.call(hide_ids()),

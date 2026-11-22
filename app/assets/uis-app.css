@@ -84,7 +84,7 @@
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 .uis-ovl-toast {
   position: fixed; bottom: var(--uis-ovl-toast-bottom, 28px); left: 50%; transform: translateX(-50%);
-  /* ⚠ CLAUDE: MUST sit above .uis-dl-backdrop (1000) and .uis-pop-surface (1000). It was 200 — below both —
+  /* ⚠ MUST sit above .uis-dl-backdrop (1000) and .uis-pop-surface (1000). It was 200 — below both —
      so every notice fired while a dialog was open rendered UNDER the backdrop and was read through
      its blur(5px): dimmed, smeared, unreadable. Nothing about the notice was wrong, including plain
      successes like "Copied" from inside a card dialog; they were simply painted behind a frosted
@@ -141,9 +141,9 @@
 .uis-btn.ico { gap: 5px; min-width: 30px; padding: 0; color: var(--uis-text-dim); position: relative; }   /* relative = the containing block for a `.uis-count.over`; inert otherwise */   /* icon button — a 30px square (grows only for a count badge); padding reset from the base */
 .uis-btn:hover:not(:disabled) { background: var(--uis-s-hov); color: var(--uis-text); }   /* hover fill from the SURFACE (bar/dialog/panel/body bind --uis-s-hov); icon buttons brighten to --uis-text */
 .uis-btn:disabled, .uis-opt:disabled { opacity: .4; cursor: not-allowed; }
-/* ⚠ CLAUDE: the icon never shrinks — a width-constrained .uis-btn.ico (forced to bar width in a
+/* ⚠ the icon never shrinks — a width-constrained .uis-btn.ico (forced to bar width in a
    .uis-barv-grp) would otherwise flex-shrink its glyph to the content box (the "tiny icons" bug).
-   ⚠ CLAUDE: an icon inside a control is sized BY THE CONTROL here — never a per-icon `size=` prop on
+   ⚠ an icon inside a control is sized BY THE CONTROL here — never a per-icon `size=` prop on
    the element (that is inline geometry). Set the icon size on the control's svg; drop `size=` in JSX. */
 .uis-btn > svg { flex-shrink: 0; width: 14px; height: 14px; }
 /* Colour variants — RECOLOUR only. */
@@ -167,6 +167,14 @@
   border-radius: 5px;
 }
 .uis-btn.ico.small { min-width: 20px; font-size: 10px; }   /* small icon square — mirrors `.uis-btn.ico { min-width: 30px }`; the 11px is for a short number or mark inside it (a glyph ignores it) */
+
+/* `.uis-ico-quiet` on a CONTAINER — the quiet icon-button flavour for a dense grid of row actions: the small icon
+   buttons inside rest muted, the frame drops to the border colour and there is no hover fill. Set once on the grid,
+   not on every button; a button's own state colour (accent / warn, set inline) still wins. Geometry is never
+   re-declared: it stays `.uis-btn.ico.small`. */
+.uis-ico-quiet .uis-btn.ico.small { color: inherit; opacity: 0.65; }
+.uis-ico-quiet .uis-btn.ico.small:not(.subtle) { border-color: var(--uis-border); }
+.uis-ico-quiet .uis-btn.ico.small:hover:not(:disabled) { background: transparent; color: inherit; }
 
 /* ── Option-selector buttons (.uis-opt in a .uis-opt-set row) — a labelled, mutually-exclusive choice:
       icon + label pills, exactly ONE `.active`. The theme picker (Dark/Light) AND any labelled selector
@@ -299,7 +307,7 @@
 /* Dropdown select — the ONE select, bordered pill + shared caret. Fill is transparent by default (a
    ghost pill on any bar); a dialog fills it (+ width:100%) — that context rule lives in §5.
    Unified from the former bar-select + dialog-select. Seed: markzen.
-   ⚠ CLAUDE: geometry is set DIRECTLY here, NOT via the :where() field base — a native <select>
+   ⚠ geometry is set DIRECTLY here, NOT via the :where() field base — a native <select>
    sizes its popup OPTION rows from the box authored on the element itself, and a zero-specificity
    :where() rule crushed that (the "lack of breathe" regression). This is the one field that can't
    ride the shared base; keep the values in lock-step with it by hand. */
@@ -374,6 +382,7 @@
 /* Hint — the ONE muted description text (under a label/control, a section note, a status line).
    Prose, so it inherits Inter (never JetBrains Mono). Used on ANY surface (dialog, bar, panel).
    Add `.mono` ONLY for code-like content (a filename, a token, a timecode) — never a sentence. */
+.mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 .uis-hnt { margin: 0; font-size: 12px; color: var(--uis-text-mute); line-height: 1.5; font-family: inherit; }
 .uis-hnt.mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 .uis-hnt.warn { color: var(--uis-warn); }
@@ -419,7 +428,7 @@ button.uis-chp:hover { opacity: .8; }
    INSIDE the icon square instead of beside it. Use it when the button must KEEP its geometry: a
    plain .uis-count is an inline pill, so it widens `.uis-btn.ico` (which is documented as growing for
    exactly that) — and a column of icon buttons stops lining up the moment one of them is wider.
-   ⚠ CLAUDE: no fill and no pill here. At this size a filled badge is a blob, and the glyph behind it
+   ⚠ no fill and no pill here. At this size a filled badge is a blob, and the glyph behind it
    already carries the meaning; the digit is an annotation ON that glyph. INK, not the button's
    colour — the number is DATA (how many), not state (what kind), and the button's own colour is
    what says the state. A token, so the dark theme flips it like everything else.
@@ -670,7 +679,7 @@ button.uis-chp:hover { opacity: .8; }
 .uis-bar-status .uis-err  { color: var(--uis-danger); }
 
 /* ─── Bar furniture — welds, separator, standalone glyph, search-fill ────────
-   ⚠ CLAUDE: a lone .uis-btn.ico is CORRECT — NEVER wrap ONE button in a weld (dead structure). Welds
+   ⚠ a lone .uis-btn.ico is CORRECT — NEVER wrap ONE button in a weld (dead structure). Welds
    exist ONLY to join 2+ buttons into a segmented pill. The WELD draws ONE continuous frame; its
    children DROP their own border and fill it, separated by a single 1px divider. Do NOT stitch a
    pill from each button's border (abutting borders seam/double on fractional-DPI). */
@@ -693,7 +702,7 @@ button.uis-chp:hover { opacity: .8; }
 .uis-barv-grp > * + * { border-top:  1px solid var(--uis-border-strong); }
 /* (No .uis-btn.ico padding override needed — .uis-btn.ico is padding:0 by default, so a welded icon fills the cell cleanly.) */
 
-/* ⚠ CLAUDE: there is NO separate "segmented switch" widget. A view-mode / on-off toggle is just
+/* ⚠ there is NO separate "segmented switch" widget. A view-mode / on-off toggle is just
    .uis-btn.ico + .active inside a .uis-barh-grp — identical to every other icon button. Do NOT reintroduce
    a .tb-seg with its own height/shape. (An earlier .tb-seg was removed 2026-07-01 for exactly this.) */
 
@@ -939,7 +948,6 @@ ul.uis-dlp-sub { padding-left: 40px; }   /* a bullet list inside the description
    1600px reads as broken, not as spacious. One readable column, left-aligned under the rail. */
 .uis-stg-page { max-width: 600px; }
 /* An app's own tab of the settings (an editor with a list and a form) uses the whole window, unlike the catalog's readable column. */
-.uis-stg-page.stg-page-app { max-width: none; height: 100%; }
 /* Option rows on the page (Theme) keep their label width instead of splitting the column — the
    catalog token, as ai-music-seed's articulation pills use it. */
 .uis-stg-page .uis-opt-set { --uis-opt-flex: 0 0 auto; }

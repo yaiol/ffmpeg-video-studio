@@ -3,7 +3,7 @@
 //! when one fails. There is nothing to choose: the app runs the one build yaiol approved, from the folder every
 //! yaiol app shares, and installs it by itself when it is missing or when a newer one is approved.
 //!
-//! ⚠ CLAUDE: NO HARDCODED UI STRINGS. Everything goes through the t() lookup with a literal key at the call site.
+//! ⚠ NO HARDCODED UI STRINGS. Everything goes through the t() lookup with a literal key at the call site.
 
 use crate::{
     i18n,

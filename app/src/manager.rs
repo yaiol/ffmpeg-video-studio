@@ -1,7 +1,7 @@
 //! The preset editor, a page of the Settings view: a list on the left and the options of the selected
 //! preset on the right. Every change is stored at once, there is no Save button.
 //!
-//! ⚠ CLAUDE: NO HARDCODED UI STRINGS. Container and codec names are proper nouns and stay literal;
+//! ⚠ NO HARDCODED UI STRINGS. Container and codec names are proper nouns and stay literal;
 //! everything else goes through the t() lookup with a literal key at the call site.
 
 use crate::{catalog::UisNum, i18n, settings::Settings};

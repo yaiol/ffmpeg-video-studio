@@ -2,7 +2,7 @@
 //! (`converter.rs`) with a compact panel and a button that opens the preview window (`work_preview.rs`) on the
 //! selected file; what else it will do differently is not decided yet.
 //!
-//! ⚠ CLAUDE: NO HARDCODED UI STRINGS. Every user-visible string goes through the t() lookup with the key
+//! ⚠ NO HARDCODED UI STRINGS. Every user-visible string goes through the t() lookup with the key
 //! a string literal at the call site.
 
 use crate::{
@@ -697,7 +697,7 @@ pub fn Work(
 
 
     rsx! {
-        // ⚠ CLAUDE: the header holds the file actions only (icon-only, tooltips). The choices that shape a
+        // ⚠ the header holds the file actions only (icon-only, tooltips). The choices that shape a
         // run - preset, where it goes, how many at once, Convert - live in the right-hand panel below,
         // one aligned column.
         UisAppHeader { app_name, app_version, bare: true,
@@ -728,7 +728,7 @@ pub fn Work(
         if let Some(popup) = popup {
             FfmpegPopup { lang: lang.clone(), popup, on_close: move |_| dismissed.set(true) }
         }
-        // ⚠ CLAUDE: tabindex makes the list the thing a click focuses, which is what lets Ctrl+A reach it;
+        // ⚠ tabindex makes the list the thing a click focuses, which is what lets Ctrl+A reach it;
         // a click on the empty part clears the selection (a row's own click stops here).
         if empty_list {
             div { class: "work-empty", p { class: "wv-failure", "{drop_text}" } }
@@ -1106,7 +1106,7 @@ pub fn Work(
                     option { value: "rename", selected: !mx_over && overwrite == Overwrite::Rename, "{s_main_overwrite_rename}" }
                 }
             }
-            // ⚠ RULE: the panel writes through. Selecting a file loads its choices into the panel; changing anything in the panel changes
+            // ⚠ the panel writes through. Selecting a file loads its choices into the panel; changing anything in the panel changes
             // the selected files at once (`sync_panel`), so there is no Apply and what the panel shows is what Convert runs.
             div { class: "converter-panel-run uis-cmp-run",
                 div { class: "uis-barh-grp",

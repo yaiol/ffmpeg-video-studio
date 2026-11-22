@@ -1,4 +1,4 @@
-// twin: uis-stg-view.jsx jsx@0812a0854a86 rsx@7f9fbefffbf5
+// twin: uis-stg-view.jsx jsx@b06f84b27fe4 rsx@4fcd9628a063
 //! UisStgView — twin of `uis-stg-view.jsx`: the full-window settings page. Same classes and
 //! element structure (rail + page, `.uis-tab-set.vertical`, `.uis-fld-labelled`, `.uis-opt-set`, `.uis-dlg-about`).
 //!
@@ -234,6 +234,7 @@ pub fn UisStgView(
                 }
             }
             div { class: "uis-stg-body uis-dlg-form",
+                if visited().iter().any(|v| v == GENERAL) {
                 div { class: "uis-stg-page", hidden: active() != GENERAL,
                     div { class: "uis-fld-labelled",
                         label { class: "uis-fld-labelled-label", "{lbl_lang}" }
@@ -267,18 +268,20 @@ pub fn UisStgView(
                         {extra}
                     }
                 }
+                }
                 for (key, page) in app_pages.iter() {
                     if visited().contains(key) {
-                        div { key: "{key}", class: "uis-stg-page stg-page-app", hidden: active() != *key, {page.clone()} }
+                        div { key: "{key}", class: "uis-stg-page", hidden: active() != *key, {page.clone()} }
                     }
                 }
                 if is_app_tab && !app_pages.iter().any(|(k, _)| *k == active()) {
-                    div { class: "uis-stg-page stg-page-app",
+                    div { class: "uis-stg-page",
                         if let Some(page) = app_page {
                             {page}
                         }
                     }
                 }
+                if visited().iter().any(|v| v == ABOUT) {
                 div { class: "uis-stg-page", hidden: active() != ABOUT,
                     div { class: "uis-dlg-about",
                         img { class: "uis-dlg-about-logo", src: "{*LOGO}", alt: "yaiol" }
@@ -290,6 +293,7 @@ pub fn UisStgView(
                     if let Some(extra) = about_extra {
                         {extra}
                     }
+                }
                 }
             }
         }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.4 — 2026-11-22
+
+- The Windows installer asks whether to install for everyone on the computer or only for you. "Only for me" needs no administrator prompt, and an update keeps the mode and folder of the install already there
+- /ALLUSERS and /CURRENTUSER choose the mode from the command line, with or without /S
+- Uninstalling removes the Start menu entries, desktop shortcut and Settings entry that belong to that install, and asks for administrator rights only for an all-users install
+- The colour picker's chosen swatch no longer keeps its ring after you pick another one
+- The colour picker opens above the rest of the window, and the saturation and hue pointer positions are whole numbers
+- The colour picker's Cancel, Apply and eyedropper labels have English defaults
+
 ## 2.0.3 — 2026-11-15
 
 - A converted file plays inside the app: a finished row has a play button that opens a player with the video's picture, a position slider, previous, play / pause, stop, next, the volume and close. When a file ends, the next converted file of the list follows, and every format ffmpeg reads plays

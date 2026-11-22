@@ -51,6 +51,8 @@
   margin: 4px 0 2px;
   cursor: pointer; text-align: left;
 }
+/* `.flush` — no outer margin: the band inside a dense grid, where the rail's air is a white strip above every group. */
+.uis-lvw-group-head.flush { margin: 0; }
 .uis-lvw-group-name  { font-size: 12.5px; }
 .uis-lvw-group-count { font-size: 11px; opacity: 0.55; font-weight: 500; }
 

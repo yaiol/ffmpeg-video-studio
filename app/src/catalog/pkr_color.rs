@@ -1,4 +1,4 @@
-// twin: uis-pkr-color.jsx jsx@b12e784d0179 rsx@0a18caf96780
+// twin: uis-pkr-color.jsx jsx@b12e784d0179 rsx@73499bad04a9
 //! UisPkrColor — twin of `uis-pkr-color.jsx`: the colour picker. A swatch button that opens a
 //! draggable popup: a saturation/hue field, an eyedropper (when the platform has one), a hex input,
 //! R/G/B number fields, a row of quick swatches, and Cancel / Apply. Same classes and element order as
@@ -14,12 +14,13 @@
 //! its grip uses a transparent overlay while the button is held - no page-wide listeners.
 //! The eyedropper: WebView2 has no `window.EyeDropper`, so on Windows the pixel under the cursor is read from the screen
 //! (anywhere on the desktop) while the button is pressed and released; elsewhere the page's own EyeDropper is used when it exists.
+//! The popup and its two sheets are portalled to `<body>` after the render, as in the JSX (`use_portal`, `popover.rs`).
 //! Differs: behaviour none. Form only: the saturation/hue field is built here (the JSX uses react-colorful) under the
 //! same class names and look, and dragging the popup uses a transparent sheet while the button is held instead of
 //! document listeners.
 
 use super::num::UisNum;
-use super::popover::use_dismiss;
+use super::popover::{use_dismiss, use_portal};
 use dioxus::prelude::*;
 use dioxus_free_icons::{
     Icon,
@@ -159,7 +160,8 @@ fn hex_to_hsv(hex: &str) -> (f64, f64, f64) {
         60.0 * ((r - g) / d + 4.0)
     };
     let s = if max == 0.0 { 0.0 } else { d / max * 100.0 };
-    (h.rem_euclid(360.0), s, max * 100.0)
+    // whole numbers, as react-colorful keeps them (the pointer and the field colour are drawn from these)
+    (h.rem_euclid(360.0).round(), s.round(), (max * 100.0).round())
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -172,9 +174,9 @@ enum Part {
 pub fn UisPkrColor(
     color: String,
     on_change: EventHandler<String>,
-    #[props(default)] cancel_label: String,
-    #[props(default)] apply_label: String,
-    #[props(default)] pick_title: String,
+    #[props(default = "Cancel".to_string())] cancel_label: String,
+    #[props(default = "Apply".to_string())] apply_label: String,
+    #[props(default = "Pick colour from screen".to_string())] pick_title: String,
 ) -> Element {
     let id = use_hook(|| NEXT_ID.fetch_add(1, Ordering::Relaxed));
     let btn_id = format!("cp-btn-{id}");
@@ -197,6 +199,10 @@ pub fn UisPkrColor(
 
     let close = use_callback(move |_: ()| open.set(false));
     use_dismiss(open(), &btn_id, &pop_id, close);
+    // The JSX portals the popup and its two sheets to <body>; so does this (see `popover.rs`).
+    use_portal(pop_id.clone(), open());
+    use_portal(format!("{pop_id}-pick"), picking());
+    use_portal(format!("{pop_id}-move"), moving().is_some());
 
     use_future(move || async move {
         if !cfg!(windows) {
@@ -223,16 +229,17 @@ pub fn UisPkrColor(
         hex.set(c);
     };
     let mut set_hsv = move |h: f64, s: f64, v: f64| {
+        let (h, s, v) = (h.round(), s.round(), v.round());
         hsv.set((h, s, v));
         let c = hsv_to_hex(h, s, v);
         draft.set(c.clone());
         hex.set(c);
     };
 
-    let toggle = {
+    let toggle = use_callback({
         let btn_id = btn_id.clone();
         let color = color.clone();
-        move |_| {
+        move |_: ()| {
             if open() {
                 open.set(false);
                 return;
@@ -257,7 +264,7 @@ pub fn UisPkrColor(
                 }
             });
         }
-    };
+    });
 
     // Grab a strip: ask the page for its box and pin the pointer to it, then the position is the value.
     let grab = move |part: Part, el_id: String, e: Event<PointerData>| {
@@ -329,24 +336,30 @@ pub fn UisPkrColor(
     let (h, s, v) = hsv();
     let sat_pointer = hsv_to_hex(h, s, v);
     let hue_color = hsv_to_hex(h, 100.0, 100.0);
-    let swatch_shadow = |on: bool, c: &str| if on { format!("box-shadow: 0 0 0 2px {c}") } else { String::new() };
+    // ⚠ the ring is its own attribute (`box_shadow`, left out when off): as a part of the style string it would stay on a swatch
+    // that is no longer the chosen one (Dioxus keeps a property the new string drops).
+    let swatch_shadow = |on: bool, c: &str| on.then(|| format!("0 0 0 2px {c}"));
     let (top, left) = pop_pos();
 
     rsx! {
         div { style: "display: inline-block; flex-shrink: 0",
             button {
                 id: "{btn_id}",
-                r#type: "button",
                 class: if open() { "uis-swt on" } else { "uis-swt" },
-                style: "background: {color}; {swatch_shadow(open(), &color)}",
-                onclick: toggle,
+                style: "background: {color};",
+                box_shadow: swatch_shadow(open(), &color),
+                onclick: move |_| toggle.call(()),
             }
             if open() {
                 style { "{FIELD_CSS}" }
                 div {
                     id: "{pop_id}",
                     class: "uis-dlg-form",
-                    style: "position: fixed; z-index: 9999; top: {top}px; left: {left}px; background: var(--uis-dlg-bgd); border: 1px solid var(--uis-border); border-radius: 10px; box-shadow: 0 8px 32px #0008; display: flex; flex-direction: column; width: 220px; overflow: hidden",
+                    // ⚠ the position is its own attributes so that the style string never changes: rewritten on each move of the
+                    // popup, it would lose its shorthands holding a var() (the background and the border).
+                    top: "{top}px",
+                    left: "{left}px",
+                    style: "position: fixed; z-index: 9999; background: var(--uis-dlg-bgd); border: 1px solid var(--uis-border); border-radius: 10px; box-shadow: 0 8px 32px #0008; display: flex; flex-direction: column; width: 220px; overflow: hidden",
                     div {
                         style: "cursor: grab; display: flex; align-items: center; justify-content: center; padding: 6px 0 4px; border-bottom: 1px solid var(--uis-border); color: var(--uis-text-dim); flex-shrink: 0",
                         onmousedown: move |e| {
@@ -408,7 +421,6 @@ pub fn UisPkrColor(
                         div { style: "display: flex; gap: 6px; align-items: center",
                             if has_eyedropper() {
                                 button {
-                                    r#type: "button",
                                     class: "uis-btn ico",
                                     title: if pick_title.is_empty() { None } else { Some(pick_title.clone()) },
                                     onclick: move |_| {
@@ -476,23 +488,21 @@ pub fn UisPkrColor(
                             for c in COLOR_SWATCHES {
                                 button {
                                     key: "{c}",
-                                    r#type: "button",
                                     class: if draft_now == c { "uis-swt small on" } else { "uis-swt small" },
-                                    style: "background: {c}; {swatch_shadow(draft_now == c, c)}",
+                                    style: "background: {c};",
+                                    box_shadow: swatch_shadow(draft_now == c, c),
                                     onclick: move |_| update_draft(c.to_string()),
                                 }
                             }
                         }
                         div { style: "display: flex; gap: 8px",
                             button {
-                                r#type: "button",
                                 class: "uis-btn subtle",
                                 style: "flex: 1",
                                 onclick: move |_| open.set(false),
                                 "{cancel_label}"
                             }
                             button {
-                                r#type: "button",
                                 class: "uis-btn primary",
                                 style: "flex: 1",
                                 onclick: move |_| {
@@ -506,12 +516,13 @@ pub fn UisPkrColor(
                 }
                 // While the eyedropper waits, a transparent sheet keeps the click that picks from reaching the window beneath.
                 if picking() {
-                    div { style: "position: fixed; inset: 0; z-index: 10000; cursor: crosshair; user-select: none" }
+                    div { id: "{pop_id}-pick", style: "position: fixed; inset: 0; z-index: 10000; cursor: crosshair; user-select: none" }
                 }
                 // While the grip is held the pointer is followed by a transparent sheet over the window,
                 // so the popup keeps moving however fast the pointer leaves it.
                 if moving().is_some() {
                     div {
+                        id: "{pop_id}-move",
                         style: "position: fixed; inset: 0; z-index: 10000; cursor: grabbing; user-select: none",
                         onmousemove: move |e| {
                             if let Some((ox, oy)) = moving() {

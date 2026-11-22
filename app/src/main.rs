@@ -1,4 +1,5 @@
-// ⚠ CLAUDE - NO HARDCODED UI STRINGS IN THIS FILE.
+// data-icon="yaiol:ffmpeg-video-studio"
+// ⚠ NO HARDCODED UI STRINGS IN THIS FILE.
 //   Every string a user can read - text, title, aria-label - MUST go through the t() lookup, and
 //   the key MUST be a string literal at the call site. Add the key to locales/en.json, then
 //   translate, sort and audit every language with the i18n scripts. Never paste translations by hand.
@@ -82,7 +83,7 @@ pub const MIN_HEIGHT_FALLBACK: f64 = 440.0;
 /// executable. The apps-cockpit finds it by its `yaiol-build:` prefix to tell a buffered build from
 /// the release it follows - the counter cannot ride in Cargo's three-part version, and `dx bundle`
 /// writes its own Windows version resource, so this is the one channel that is entirely ours.
-/// ⚠ CLAUDE: keep it a single `concat!` of literals, and read it through `black_box` (as
+/// ⚠ keep it a single `concat!` of literals, and read it through `black_box` (as
 /// app_version_build does). A plain `BUILD_ID["yaiol-build:".len()..]` is constant-folded and the
 /// optimiser keeps only the suffix - the PREFIX the cockpit searches for disappears from the exe and
 /// every build reads as the bare release (found 2026-10-12 by grepping the staged exe).
@@ -90,7 +91,7 @@ const BUILD_ID: &str = concat!("yaiol-build:", env!("YAIOL_BUILD_ID"));
 
 /// The full build identity shown to the user: the release version plus the build counter (the 4th
 /// segment a buffered commit bumps), or just the release version on a clean build.
-/// ⚠ CLAUDE: DISPLAY ONLY. The release version (`CARGO_PKG_VERSION`) stays plain three-part semver
+/// ⚠ DISPLAY ONLY. The release version (`CARGO_PKG_VERSION`) stays plain three-part semver
 /// and must not absorb the counter: an update check compares it against the published version, and
 /// four parts is not semver.
 fn app_version_build() -> String {
@@ -146,7 +147,7 @@ fn main() {
         );
         engine::log::install_panic_hook();
     }
-    // ⚠ CLAUDE: in a DEBUG build Dioxus writes the window's position and size to `window-state.json` in
+    // ⚠ in a DEBUG build Dioxus writes the window's position and size to `window-state.json` in
     // the temp folder when the app ends and puts the window back there on the next launch - for EVERY
     // Dioxus app on the machine, from the one shared file. A session that ended while the window was
     // MINIMIZED saved (-32000, -32000) and a 200 px square, so the next `cargo run` opened off screen
@@ -157,7 +158,7 @@ fn main() {
     dioxus::LaunchBuilder::desktop()
         .with_cfg(
             dioxus::desktop::Config::new()
-                // ⚠ CLAUDE: the browser's own right-click menu (Back, Reload, Save as, Print, Inspect) is
+                // ⚠ the browser's own right-click menu (Back, Reload, Save as, Print, Inspect) is
                 // never offered. Dioxus keeps it in a debug build by default - which is how it reached the
                 // list on 2026-10-13 - and an app that wants a context menu draws its own.
                 .with_disable_context_menu(true)
@@ -204,7 +205,7 @@ pub(crate) async fn fit_window_height() {
     if height == 0.0 {
         height = MIN_HEIGHT_FALLBACK;
     }
-    // ⚠ CLAUDE: setting a minimum size makes the window system re-check the size, and on Windows that un-maximizes a
+    // ⚠ setting a minimum size makes the window system re-check the size, and on Windows that un-maximizes a
     // maximized window and puts it back at its old size somewhere else (seen on every switch to the batch view). A
     // maximized window is already above any minimum, so it is left alone; the next switch of view measures again.
     let window = dioxus::desktop::window();
@@ -514,7 +515,7 @@ fn App() -> Element {
                 // yaiol has news for this app: the second reminder, drawn only then; a click reopens the announcements.
                 UisBtnNews { lang: lang.clone() }
             }
-            // ⚠ CLAUDE: BOTH views stay mounted and the other one is only hidden, so nothing either of them holds (a
+            // ⚠ BOTH views stay mounted and the other one is only hidden, so nothing either of them holds (a
             // button's state, the volume, a scroll position, an open row) is ever dropped. The Settings page is given to
             // the view on screen only.
             div { class: if mode() == Mode::Work { "view-slot" } else { "view-slot view-hidden" },

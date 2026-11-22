@@ -1,4 +1,4 @@
-// twin: uis-ctl-popover.jsx jsx@fdc1ece14db5 rsx@998861e21ef5
+// twin: uis-ctl-popover.jsx jsx@cebca24f981e rsx@f19b1a2e75b1
 //! UisPopover — twin of `uis-ctl-popover.jsx`: the ONE floating-panel MECHANISM of the popover family. It
 //! positions a `.uis-pop-surface` against an anchor element: below it (flipping above when there is no
 //! room), width floored at the anchor (optional) and capped, anchored to the left or right edge so it
@@ -12,11 +12,20 @@
 //! hover-opened flyout stay open while the pointer is over itself.
 //!
 //! The anchor is named by its element id (`anchor_id`): the caller gives its trigger an `id`.
-//! `.uis-pop-surface` is `position: fixed`, so it needs no portal; the placement MATH is Rust (below), and
-//! the page is only asked for two things rsx cannot do: the anchor's box, and the document-level events
-//! (a press outside, Esc, scroll, resize). That is the one place this control touches the JS bridge.
+//! The placement MATH is Rust (below), and the page is asked for what rsx cannot do: the anchor's box, the
+//! document-level events (a press outside, Esc, scroll, resize), and the PORTAL. The JSX renders the panel into
+//! `document.body`; rsx has no portal, so once the panel is in the page the bridge moves its node to the end of
+//! `<body>` (a node keeps its id, so the vdom still updates and removes it) and forwards the bubbling events of
+//! that node to the interpreter's handler, because Dioxus listens on its root element and a node outside the root
+//! would otherwise hear nothing. That is the one place this control touches the JS bridge.
 //! Differs: behaviour none. Form only: the trigger is named by id (`anchor_id`) because rsx has no element refs, and
-//! the panel is not portalled (`.uis-pop-surface` is `position: fixed`, which needs none).
+//! the portal is done after the render (the node is created in place, then moved), so a `<!---->` placeholder the
+//! vdom keeps may sit in `<body>` while the panel is closed; the side the panel is not placed from is written `auto`
+//! where the JSX leaves it out (Dioxus never drops a property from a rewritten style).
+
+// Shared by every app: one that uses the menu but not the pickers would otherwise warn on `use_dismiss`
+// and the `Left` alignment, which only the pickers and some callers use.
+#![allow(dead_code)]
 
 use dioxus::document::Eval;
 use dioxus::prelude::*;
@@ -133,7 +142,49 @@ try {
 }
 "#;
 
+/// The portal: move the panel's node to the end of `<body>` and forward its bubbling events to the interpreter
+/// (Dioxus listens on its root element, which no longer contains the node). Retries until the vdom's mutation has
+/// reached the page. `__ID__` is the panel's element id.
+const PORTAL: &str = r#"
+(function () {
+  const id = "__ID__";
+  const types = ['click', 'dblclick', 'mousedown', 'mouseup', 'mousemove', 'mouseover', 'mouseout', 'contextmenu',
+    'pointerdown', 'pointerup', 'pointermove', 'pointerover', 'pointerout', 'keydown', 'keyup', 'input', 'change',
+    'focusin', 'focusout', 'wheel'];
+  let tries = 0;
+  const go = () => {
+    const n = document.getElementById(id);
+    if (!n) { if (++tries < 40) requestAnimationFrame(go); return; }
+    if (n.parentNode !== document.body) document.body.appendChild(n);
+    if (!n.__uisFwd) {
+      n.__uisFwd = true;
+      for (const t of types) n.addEventListener(t, (e) => window.interpreter.handler(e));
+    }
+  };
+  go();
+})();
+"#;
+
+/// Moves the element with this id to the end of `<body>` once it is in the page and while `active` (see the
+/// module notes: the JSX portals the same panels), and removes it if it is still there when the owner goes
+/// away. Call it once per component, every render, before any early return.
+pub(super) fn use_portal(id: String, active: bool) {
+    {
+        let id = id.clone();
+        use_effect(use_reactive!(|(active,)| {
+            if active {
+                let _ = document::eval(&PORTAL.replace("__ID__", &id));
+            }
+        }));
+    }
+    use_drop(move || {
+        let _ = document::eval(&format!("{{ const n = document.getElementById('{id}'); if (n && n.parentNode === document.body) n.remove(); }}"));
+    });
+}
+
 /// The inline style of the panel: the JSX's placement math, line for line.
+/// ⚠ All four sides are always written, the unused one as `auto`: Dioxus keeps a property the new string no longer sets, so a panel
+/// that flipped while open would otherwise stay pinned to both sides. (`min-width` follows a prop that does not change while mounted.)
 #[allow(clippy::too_many_arguments)]
 fn placement_style(
     r: Rect,
@@ -161,13 +212,13 @@ fn placement_style(
         // A flyout hangs DOWN from its row, so its room is everything below that row's top.
         let cap = fit(r.win_h - r.top - MARGIN * 2.0);
         let horizontal = if flip_left {
-            format!("right: {}px;", MARGIN.max(r.win_w - r.left))
+            format!("left: auto; right: {}px;", MARGIN.max(r.win_w - r.left))
         } else {
-            format!("left: {}px;", r.right)
+            format!("left: {}px; right: auto;", r.right)
         };
         // -4 cancels .uis-pop-surface's padding so the first row lines up with the parent row.
         let top = MARGIN.max((r.top - 4.0).min(r.win_h - cap - MARGIN));
-        return format!("max-width: {mw}px; max-height: {cap}px; {horizontal} top: {top}px;");
+        return format!("max-width: {mw}px; max-height: {cap}px; {horizontal} top: {top}px; bottom: auto;");
     }
 
     // Flip up only when below is genuinely cramped AND above is roomier.
@@ -176,14 +227,14 @@ fn placement_style(
     let cap = fit(if go_up { room_above } else { room_below });
     let min_w = if min_width_anchor { format!("min-width: {}px; ", r.width) } else { String::new() };
     let horizontal = if anchor_right {
-        format!("right: {}px;", MARGIN.max(r.win_w - r.right))
+        format!("left: auto; right: {}px;", MARGIN.max(r.win_w - r.right))
     } else {
-        format!("left: {}px;", r.left)
+        format!("left: {}px; right: auto;", r.left)
     };
     let vertical = if go_up {
-        format!("bottom: {}px;", r.win_h - r.top + 4.0)
+        format!("top: auto; bottom: {}px;", r.win_h - r.top + 4.0)
     } else {
-        format!("top: {}px;", r.bottom + 4.0)
+        format!("top: {}px; bottom: auto;", r.bottom + 4.0)
     };
     format!("max-width: {mw}px; max-height: {cap}px; {min_w}{horizontal} {vertical}")
 }
@@ -269,6 +320,8 @@ pub fn UisPopover(
             }
         }));
     }
+
+    use_portal(pop_id.clone(), open && rect().is_some());
 
     let Some(r) = rect() else { return rsx! {} };
     if !open {

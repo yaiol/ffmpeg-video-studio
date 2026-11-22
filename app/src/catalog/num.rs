@@ -1,4 +1,4 @@
-// twin: uis-num.jsx jsx@c6d688d7f82c rsx@1213c41becd8
+// twin: uis-num.jsx jsx@c6d688d7f82c rsx@aa16fe4c1c05
 //! UisNum — twin of `uis-num.jsx`: a numeric input with themed ▲▼ steppers instead
 //! of the browser's own spinner. Same classes and element order (`.uis-num`, `.uis-num-input`,
 //! `.uis-num-steppers`, `.uis-num-step`), so `uis-app.css` skins it unchanged.
@@ -134,7 +134,7 @@ pub fn UisNum(
     let style = if width.is_empty() { None } else { Some(format!("width: {width}")) };
 
     rsx! {
-        div { class: "{class}", style, title: "{title}",
+        div { class: "{class}", style, title: if title.is_empty() { None } else { Some(title.clone()) },
             input {
                 id: "{id}",
                 class: "uis-num-input",

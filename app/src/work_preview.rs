@@ -11,7 +11,7 @@
 //! pane's image as a motion-JPEG stream from a server on this machine; no script runs per picture.
 //! The sound is a second ffmpeg (`engine::sound`) started with the stream, played on the default output.
 //!
-//! ⚠ CLAUDE: NO HARDCODED UI STRINGS. Every user-visible string goes through the t() lookup with the key
+//! ⚠ NO HARDCODED UI STRINGS. Every user-visible string goes through the t() lookup with the key
 //! a string literal at the call site.
 
 use crate::{

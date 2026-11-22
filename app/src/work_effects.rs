@@ -3,7 +3,7 @@
 //! menu as Settings > Effects and shown as a card that can be removed. The list is the work view's own, for the file in
 //! front of it: it is not a saved effects entry (those are the batch view's), and the preview shows it as it stands.
 //!
-//! ⚠ CLAUDE: NO HARDCODED UI STRINGS. Every user-visible string goes through the t() lookup with the key
+//! ⚠ NO HARDCODED UI STRINGS. Every user-visible string goes through the t() lookup with the key
 //! a string literal at the call site.
 
 use crate::{
